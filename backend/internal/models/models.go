@@ -36,7 +36,8 @@ type Supplier struct {
 	CompanyName  string    `gorm:"size:255;not null" json:"company_name"`
 	INN          string    `gorm:"size:12" json:"inn,omitempty"`
 	Description  string    `gorm:"type:text" json:"description,omitempty"`
-	LogoURL      string    `gorm:"size:500" json:"logo_url,omitempty"`
+	Phone        string    `gorm:"size:32" json:"phone,omitempty"`
+	LogoURL      string    `gorm:"column:logo_url;size:500" json:"logo_url,omitempty"`
 	Rating       float64   `gorm:"type:decimal(3,2);default:0" json:"rating"`
 	ReviewsCount int       `gorm:"default:0" json:"reviews_count"`
 	IsVerified   bool      `gorm:"default:false" json:"is_verified"`
@@ -68,6 +69,7 @@ type Product struct {
 	Unit        string    `gorm:"size:50;not null" json:"unit"`
 	Type        string    `gorm:"size:20;not null;index" json:"type"` // material | service
 	IsActive    bool      `gorm:"default:true" json:"is_active"`
+	ImageURL    string    `gorm:"column:image_url;size:500" json:"image_url,omitempty"`
 
 	Category Category       `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
 	Images   []ProductImage `json:"images,omitempty"`
@@ -101,6 +103,7 @@ type Listing struct {
 	Type         string     `gorm:"size:20;not null;default:material" json:"type"` // material | service | other
 	Status       string     `gorm:"size:20;not null;default:active" json:"status"` // active | hidden | deleted
 	ContactPhone string     `gorm:"size:20" json:"contact_phone,omitempty"`
+	ImageURL     string     `gorm:"column:image_url;size:500" json:"image_url,omitempty"`
 
 	User   User    `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Region *Region `gorm:"foreignKey:RegionID" json:"region,omitempty"`
