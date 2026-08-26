@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -84,61 +85,78 @@ export default function ProductCompareScreen() {
     const hasDiscount = item.discount_percent > 0 && item.final_price < item.price;
     const isBest = index === 0 && sort === "price_asc";
 
-    return (
-      <View style={[styles.card, isBest && styles.cardBest]}>
-        {isBest && (
-          <View style={styles.bestBadge}>
-            <Text style={styles.bestBadgeText}>Лучшая цена</Text>
-          </View>
-        )}
+    // Расчет экономии на лучшем предложении, если есть подписка
+    const best = isBest ? offers[0] : null;
+    const saved =
+      best && best.discount_percent > 0
+        ? best.price - best.final_price
+        : 0;
 
-        <View style={styles.cardHeader}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.supplierRow}>
-              <Text style={styles.supplierName}>{item.supplier.company_name}</Text>
-              {item.supplier.is_verified && (
-                <Text style={styles.verified}>✓</Text>
-              )}
+    return (
+      <View>
+        <View style={[styles.card, isBest && styles.cardBest]}>
+          {isBest && (
+            <View style={styles.bestBadge}>
+              <Text style={styles.bestBadgeText}>Лучшая цена</Text>
             </View>
-            <Text style={styles.rating}>
-              ★ {item.supplier.rating.toFixed(1)}
-              {item.supplier.reviews_count > 0
-                ? ` · ${item.supplier.reviews_count} отзывов`
-                : ""}
+          )}
+
+          <View style={styles.cardHeader}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.supplierRow}>
+                <Text style={styles.supplierName}>{item.supplier.company_name}</Text>
+                {item.supplier.is_verified && (
+                  <Text style={styles.verified}>✓</Text>
+                )}
+              </View>
+              <Text style={styles.rating}>
+                ★ {item.supplier.rating.toFixed(1)}
+                {item.supplier.reviews_count > 0
+                  ? ` · ${item.supplier.reviews_count} отзывов`
+                  : ""}
+              </Text>
+            </View>
+            <Text style={styles.region}>{item.region?.name}</Text>
+          </View>
+
+          <View style={styles.priceBlock}>
+            {hasDiscount ? (
+              <>
+                <Text style={styles.oldPrice}>{formatPrice(item.price)}</Text>
+                <Text style={styles.finalPrice}>{formatPrice(item.final_price)}</Text>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>−{item.discount_percent}%</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.finalPrice}>{formatPrice(item.price)}</Text>
+            )}
+          </View>
+
+          <View style={styles.metaRow}>
+            <Text style={styles.meta}>
+              от {item.min_order_qty} {product?.unit || "шт"}
+            </Text>
+            {item.delivery_days != null && (
+              <Text style={styles.meta}>· {item.delivery_days} дн.</Text>
+            )}
+            {item.stock_qty != null && (
+              <Text style={styles.meta}>· в наличии {item.stock_qty}</Text>
+            )}
+          </View>
+
+          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+            <Text style={styles.actionText}>Связаться</Text>
+          </TouchableOpacity>
+        </View>
+
+        {hasSub && isBest && saved > 0 && (
+          <View style={styles.savingsBanner}>
+            <Text style={styles.savingsText}>
+              Экономия на лучшем предложении: ~{saved.toFixed(0)} ₽
             </Text>
           </View>
-          <Text style={styles.region}>{item.region?.name}</Text>
-        </View>
-
-        <View style={styles.priceBlock}>
-          {hasDiscount ? (
-            <>
-              <Text style={styles.oldPrice}>{formatPrice(item.price)}</Text>
-              <Text style={styles.finalPrice}>{formatPrice(item.final_price)}</Text>
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>−{item.discount_percent}%</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.finalPrice}>{formatPrice(item.price)}</Text>
-          )}
-        </View>
-
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>
-            от {item.min_order_qty} {product?.unit || "шт"}
-          </Text>
-          {item.delivery_days != null && (
-            <Text style={styles.meta}>· {item.delivery_days} дн.</Text>
-          )}
-          {item.stock_qty != null && (
-            <Text style={styles.meta}>· в наличии {item.stock_qty}</Text>
-          )}
-        </View>
-
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-          <Text style={styles.actionText}>Связаться</Text>
-        </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -174,10 +192,29 @@ export default function ProductCompareScreen() {
             </Text>
           ) : null}
 
-          {hasSub && (
+          {hasSub ? (
             <View style={styles.subBanner}>
               <Text style={styles.subBannerText}>Ваша скидка по подписке применена</Text>
             </View>
+          ) : (
+            <TouchableOpacity
+              style={{
+                marginTop: 12,
+                backgroundColor: "#FFFBEB",
+                borderRadius: 10,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: "#FDE68A",
+              }}
+              onPress={() => router.push("/(app)/subscription")}
+            >
+              <Text style={{ color: "#92400E", fontWeight: "700", fontSize: 13 }}>
+                С Premium цены ниже на 5–15%
+              </Text>
+              <Text style={{ color: "#A16207", fontSize: 12, marginTop: 4 }}>
+                Подключить скидку →
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -260,6 +297,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   subBannerText: { color: "#15803D", fontSize: 13, fontWeight: "600" },
+  savingsBanner: {
+    marginTop: -4,
+    marginBottom: 10,
+    marginHorizontal: 4,
+    backgroundColor: "#F0FDF4",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#DCFCE7",
+  },
+  savingsText: {
+    color: "#16A34A",
+    fontSize: 13,
+    fontWeight: "600",
+  },
   sortRow: {
     flexDirection: "row",
     alignItems: "center",

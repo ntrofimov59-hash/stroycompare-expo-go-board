@@ -11,11 +11,11 @@ import {
   Modal,
   Alert,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { api } from "../src/api/client";
-import { useAuthStore } from "../src/store/auth";
-import { useSettingsStore } from "../src/store/settings";
+import { api } from "../../src/api/client";
+import { useAuthStore } from "../../src/store/auth";
+import { useSettingsStore } from "../../src/store/settings";
 
 type Listing = {
   id: string;
@@ -175,7 +175,20 @@ export default function BoardScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={[
+                styles.card,
+                {
+                  shadowColor: "#000",
+                  shadowOpacity: 0.06,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => router.push(`/(app)/listing/${item.id}`)}
+            >
               <View style={styles.cardIcon}>
                 <Ionicons
                   name={
@@ -315,9 +328,9 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   cardIcon: {
     width: 64,

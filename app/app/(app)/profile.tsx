@@ -1,12 +1,66 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from "react-native";
+import { useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../src/store/auth";
 import { useSettingsStore } from "../../src/store/settings";
+import { api } from "../../src/api/client";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, accessToken, setAuth, logout } = useAuthStore();
   const { regionName, setRegion } = useSettingsStore();
+
+  const [modal, setModal] = useState(false);
+  const [company, setCompany] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const becomeSupplier = async () => {
+    if (!company.trim()) {
+      Alert.alert("Укажите название компании");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await api.post("/users/me/become-supplier", {
+        company_name: company.trim(),
+      });
+      // Обновляем user в store
+      if (accessToken) {
+        await setAuth(accessToken, {
+          id: data.id,
+          email: data.email,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          role: data.role,
+        });
+      }
+      setModal(false);
+      setCompany("");
+      Alert.alert("Готово", "Вы поставщик. Добавьте цены в «Мои предложения».");
+      router.push("/(app)/supplier-offers");
+    } catch (e: any) {
+      const msg = e?.response?.data?.error?.message || "";
+      if (msg.includes("premium") || e?.response?.status === 403) {
+        Alert.alert(
+          "Нужен Premium",
+          "Чтобы стать поставщиком, оформите подписку.",
+          [
+            { text: "Отмена", style: "cancel" },
+            {
+              text: "Premium",
+              onPress: () => router.push("/(app)/subscription"),
+            },
+          ]
+        );
+      } else if (msg.includes("already")) {
+        Alert.alert("Вы уже поставщик");
+      } else {
+        Alert.alert("Ошибка", msg || "Не удалось");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pickRegion = () => {
     Alert.alert("Регион", "Выберите регион", [
@@ -56,19 +110,24 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {user?.role === "supplier" && (
-        <TouchableOpacity
-          style={styles.section}
-          onPress={() => router.push("/(app)/supplier-offers")}
-        >
+      <View style={styles.section}>
+        {user?.role === "buyer" && (
           <MenuRow
             icon="storefront-outline"
+            title="Стать поставщиком"
+            subtitle="Нужна активная подписка Premium"
+            onPress={() => setModal(true)}
+          />
+        )}
+        {user?.role === "supplier" && (
+          <MenuRow
+            icon="list-outline"
             title="Мои предложения"
             subtitle="Цены в сравнении"
             onPress={() => router.push("/(app)/supplier-offers")}
           />
-        </TouchableOpacity>
-      )}
+        )}
+      </View>
 
       <View style={styles.section}>
         <MenuRow
@@ -89,6 +148,49 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.logout} onPress={onLogout}>
         <Text style={styles.logoutText}>Выйти</Text>
       </TouchableOpacity>
+
+      {/* Модальное окно для регистрации поставщика */}
+      <Modal visible={modal} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8, color: "#0F172A" }}>Стать поставщиком</Text>
+            <Text style={{ color: "#707579", marginBottom: 16, fontSize: 14 }}>
+              Ваши цены появятся в сравнении. Нужен активный Premium.
+            </Text>
+            <TextInput
+              placeholder="Название компании"
+              placeholderTextColor="#8E8E93"
+              value={company}
+              onChangeText={setCompany}
+              style={{
+                borderWidth: 1,
+                borderColor: "#E4E4E7",
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 12,
+                fontSize: 16,
+                color: "#0F172A",
+              }}
+            />
+            <TouchableOpacity
+              onPress={becomeSupplier}
+              disabled={loading}
+              style={{ backgroundColor: "#0F172A", borderRadius: 12, padding: 14, alignItems: "center" }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "700" }}>Подтвердить</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModal(false)}>
+              <Text style={{ textAlign: "center", marginTop: 16, color: "#707579", fontWeight: "600" }}>
+                Отмена
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -166,6 +268,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
+    marginBottom: 12,
   },
   logoutText: { color: "#EF4444", fontWeight: "700", fontSize: 16 },
 });

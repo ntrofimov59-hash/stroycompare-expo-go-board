@@ -78,6 +78,14 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="listing/[id]"
+        options={{
+          href: null,
+          title: "Объявление",
+          headerShown: true,
+        }}
+      />
+      <Tabs.Screen
         name="supplier-offers"
         options={{
           href: null,

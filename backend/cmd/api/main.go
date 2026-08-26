@@ -12,7 +12,9 @@ import (
 	"github.com/stroycompare/backend/internal/database"
 	"github.com/stroycompare/backend/internal/listings"
 	"github.com/stroycompare/backend/internal/middleware"
+	"github.com/stroycompare/backend/internal/offers"
 	"github.com/stroycompare/backend/internal/subscriptions"
+	"github.com/stroycompare/backend/internal/users"
 )
 
 func main() {
@@ -61,6 +63,8 @@ func main() {
 		catalog.RegisterRoutes(v1, db, cfg)
 		subscriptions.RegisterRoutes(v1, db, cfg)
 		listings.RegisterRoutes(v1, db, cfg)
+		offers.RegisterRoutes(v1, db, cfg)
+		users.RegisterRoutes(v1, db, cfg)
 		_ = rdb
 	}
 
