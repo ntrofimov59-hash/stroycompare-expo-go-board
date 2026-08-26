@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,41 +7,98 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
-  RefreshControl,
+  Animated,
+  Easing,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api/client";
 import { useAuthStore } from "../../src/store/auth";
 
-type Plan = {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  duration_days: number;
-  discount_percent: number;
-};
+const PLAN_ID = "c0000001-0000-0000-0000-000000000002";
+
+const FEATURES = [
+  {
+    icon: "pricetag" as const,
+    color: "#E8A017",
+    title: "Скидка в сравнении",
+    text: "Цена с подпиской сразу в карточке поставщика — без калькулятора.",
+  },
+  {
+    icon: "storefront" as const,
+    color: "#5B8DEF",
+    title: "Кабинет поставщика",
+    text: "Свои прайсы в таблице сравнения. Trial при регистрации как supplier.",
+  },
+  {
+    icon: "flash" as const,
+    color: "#E85D4C",
+    title: "Быстрый выбор",
+    text: "Регион, наличие и срок в одном экране — не десять вкладок.",
+  },
+  {
+    icon: "shield-checkmark" as const,
+    color: "#4AB0A0",
+    title: "Прозрачные условия",
+    text: "Один тариф. Без скрытых комиссий на этом этапе.",
+  },
+];
 
 export default function SubscriptionScreen() {
+  const insets = useSafeAreaInsets();
   const { accessToken, user } = useAuthStore();
-  const [plans, setPlans] = useState<Plan[]>([]);
   const [mySub, setMySub] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [buying, setBuying] = useState<string | null>(null);
+  const [buying, setBuying] = useState(false);
+
+  const star = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
+  const rise = useRef(new Animated.Value(24)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(star, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(star, {
+          toValue: 0,
+          duration: 1600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rise, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const load = async () => {
     try {
-      const plansRes = await api.get("/subscriptions/plans");
-      setPlans(plansRes.data.plans || []);
       if (accessToken) {
         const meRes = await api.get("/subscriptions/me");
         setMySub(meRes.data);
       } else {
         setMySub(null);
       }
-    } catch (e) {
-      console.log(e);
+    } catch {
+      setMySub(null);
     } finally {
       setLoading(false);
     }
@@ -54,226 +111,243 @@ export default function SubscriptionScreen() {
     }, [accessToken])
   );
 
-  const purchase = async (planId: string) => {
+  const purchase = async () => {
     if (!accessToken) {
-      Alert.alert("Войдите", "Нужен аккаунт");
+      Alert.alert("Войдите", "Чтобы подключить Premium, нужен аккаунт");
       return;
     }
-    setBuying(planId);
+    setBuying(true);
     try {
-      await api.post("/subscriptions/purchase", { plan_id: planId });
-      Alert.alert("Готово", "Подписка активирована");
+      await api.post("/subscriptions/purchase", { plan_id: PLAN_ID });
       await load();
     } catch (e: any) {
       Alert.alert("Ошибка", e?.response?.data?.error?.message || "Не удалось");
     } finally {
-      setBuying(null);
+      setBuying(false);
     }
   };
 
+  const hasSub = !!mySub?.has_subscription;
+  const until = mySub?.subscription?.end_at
+    ? new Date(mySub.subscription.end_at).toLocaleDateString("ru-RU")
+    : "";
+  const isSupplier = user?.role === "supplier";
+
+  const scale = star.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
+  const glow = star.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0.7],
+  });
+
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#2AABEE" />
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <ActivityIndicator color="#E8A017" />
       </View>
     );
   }
 
-  const hasSub = !!mySub?.has_subscription;
-  const plan = mySub?.subscription?.plan;
-  const isTrial = mySub?.subscription?.payment_id?.startsWith?.("trial");
-  const isSupplier = user?.role === "supplier";
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={load} tintColor="#2AABEE" />
-      }
-    >
-      <Text style={styles.h1}>Premium</Text>
-      <Text style={styles.lead}>
-        Скидки в сравнении цен и доступ к кабинету поставщика
-      </Text>
-
-      {/* Статус */}
-      {hasSub ? (
-        <View style={styles.statusCard}>
-          <View style={styles.statusTop}>
-            <Ionicons name="checkmark-circle" size={24} color="#16A34A" />
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={styles.statusTitle}>
-                {isTrial ? "Пробный период" : "Подписка активна"}
-                {plan ? ` · ${plan.name}` : ""}
-              </Text>
-              <Text style={styles.statusMeta}>
-                Скидка −{plan?.discount_percent}% · до{" "}
-                {new Date(mySub.subscription.end_at).toLocaleDateString("ru-RU")}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.benefitRow}>
-            <Benefit icon="pricetag-outline" text="Цены со скидкой в сравнении" />
-            <Benefit icon="storefront-outline" text="Размещение предложений" />
-            <Benefit icon="trending-down-outline" text="Экономия на закупках" />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.hintCard}>
-          <Text style={styles.hintText}>
-            Без Premium цены в сравнении без скидки. Поставщикам нужен Premium или trial.
-          </Text>
-        </View>
-      )}
-
-      {/* Для поставщика */}
-      {isSupplier && (
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => router.push("/(app)/supplier-offers")}
-          activeOpacity={0.7}
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: insets.top }}>
+      <View style={styles.root}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="list-outline" size={22} color="#2AABEE" />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.actionTitle}>Мои предложения</Text>
-            <Text style={styles.actionSub}>Цены в сравнении для ваших товаров</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
-        </TouchableOpacity>
-      )}
-
-      {/* Быстрый переход к ценам */}
-      <TouchableOpacity
-        style={styles.actionCard}
-        onPress={() => router.push("/(app)/")}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="git-compare-outline" size={22} color="#0F172A" />
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.actionTitle}>Сравнить цены</Text>
-          <Text style={styles.actionSub}>
-            {hasSub ? "Скидка уже применяется" : "Откройте товар в разделе Цены"}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>
-        {hasSub ? "Сменить тариф" : "Выбрать тариф"}
-      </Text>
-
-      {plans.map((p) => (
-        <View key={p.id} style={styles.plan}>
-          <View style={styles.planTop}>
-            <Text style={styles.planName}>{p.name}</Text>
-            <View style={styles.discountPill}>
-              <Text style={styles.discountText}>−{p.discount_percent}%</Text>
-            </View>
-          </View>
-          {p.description ? (
-            <Text style={styles.planDesc}>{p.description}</Text>
-          ) : null}
-          <Text style={styles.planPrice}>
-            {p.price} ₽
-            <Text style={styles.planDays}> / {p.duration_days} дн.</Text>
-          </Text>
-          <TouchableOpacity
-            style={styles.buyBtn}
-            disabled={!!buying}
-            onPress={() => purchase(p.id)}
+          <Animated.View
+            style={[styles.hero, { opacity: fade, transform: [{ translateY: rise }] }]}
           >
-            {buying === p.id ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buyText}>
-                {hasSub ? "Перейти на тариф" : "Подключить"}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      ))}
-    </ScrollView>
-  );
-}
+            <Animated.View
+              style={[
+                styles.starWrap,
+                { opacity: glow, transform: [{ scale }] },
+              ]}
+            >
+              <Ionicons name="diamond" size={56} color="#E8A017" />
+            </Animated.View>
+            <Text style={styles.brand}>StroyCompare</Text>
+            <Text style={styles.h1}>Premium</Text>
+            <Text style={styles.lead}>
+              {hasSub
+                ? `Подписка активна${until ? ` до ${until}` : ""}`
+                : "Скидка в сравнении цен и доступ к кабинету поставщика"}
+            </Text>
+          </Animated.View>
 
-function Benefit({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
-  return (
-    <View style={styles.benefit}>
-      <Ionicons name={icon} size={16} color="#15803D" />
-      <Text style={styles.benefitText}>{text}</Text>
+          {FEATURES.map((f, i) => (
+            <FeatureRow key={f.title} {...f} index={i} />
+          ))}
+
+          {hasSub && isSupplier && (
+            <TouchableOpacity
+              style={styles.linkCard}
+              onPress={() => router.push("/(app)/supplier-offers")}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="list-outline" size={22} color="#5B8DEF" />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.linkTitle}>Мои предложения</Text>
+                <Text style={styles.linkSub}>Цены в таблице сравнения</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+            </TouchableOpacity>
+          )}
+
+          {/* Увеличенный отступ, чтобы контент не перекрывался плавающей кнопкой и таб-баром */}
+          <View style={{ height: 130 }} />
+        </ScrollView>
+
+        {/* Плавающая кнопка поднята выше таб-бара */}
+        <View style={styles.dock}>
+          {!hasSub ? (
+            <>
+              <Text style={styles.dockPrice}>699 ₽ · 90 дней</Text>
+              <TouchableOpacity
+                style={styles.cta}
+                onPress={purchase}
+                disabled={buying}
+                activeOpacity={0.85}
+              >
+                {buying ? (
+                  <ActivityIndicator color="#1C1C1E" />
+                ) : (
+                  <Text style={styles.ctaText}>Подключить Premium</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.cta}
+              onPress={() => router.push("/(app)/")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.ctaText}>Сравнить цены со скидкой</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
 
+function FeatureRow({
+  icon,
+  color,
+  title,
+  text,
+  index,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  title: string;
+  text: string;
+  index: number;
+}) {
+  const a = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(a, {
+      toValue: 1,
+      duration: 420,
+      delay: 180 + index * 90,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const y = a.interpolate({ inputRange: [0, 1], outputRange: [16, 0] });
+
+  return (
+    <Animated.View style={[styles.feat, { opacity: a, transform: [{ translateY: y }] }]}>
+      <View style={[styles.featIcon, { backgroundColor: color }]}>
+        <Ionicons name={icon} size={20} color="#fff" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.featTitle}>{title}</Text>
+        <Text style={styles.featText}>{text}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F4F5" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  h1: { fontSize: 24, fontWeight: "700", color: "#0F172A" },
-  lead: { marginTop: 6, marginBottom: 16, fontSize: 14, color: "#707579", lineHeight: 20 },
-  statusCard: {
-    backgroundColor: "#ECFDF5",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
+  scroll: { paddingHorizontal: 20, paddingTop: 28 },
+  hero: { alignItems: "center", marginBottom: 28 },
+  starWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#FFF6E0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
   },
-  statusTop: { flexDirection: "row", alignItems: "center" },
-  statusTitle: { fontWeight: "700", color: "#15803D", fontSize: 15 },
-  statusMeta: { marginTop: 2, fontSize: 13, color: "#16A34A" },
-  benefitRow: { marginTop: 12, gap: 8 },
-  benefit: { flexDirection: "row", alignItems: "center", gap: 8 },
-  benefitText: { fontSize: 13, color: "#166534" },
-  hintCard: {
-    backgroundColor: "#FFFBEB",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#FDE68A",
+  brand: { fontSize: 13, fontWeight: "600", color: "#8E8E93", letterSpacing: 0.4 },
+  h1: {
+    marginTop: 4,
+    fontSize: 34,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.6,
   },
-  hintText: { fontSize: 13, color: "#92400E", lineHeight: 18 },
-  actionCard: {
+  lead: {
+    marginTop: 8,
+    fontSize: 15,
+    lineHeight: 21,
+    color: "#8E8E93",
+    textAlign: "center",
+    paddingHorizontal: 12,
+  },
+  feat: { flexDirection: "row", gap: 14, marginBottom: 20, alignItems: "flex-start" },
+  featIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featTitle: { fontSize: 17, fontWeight: "700", color: "#0F172A" },
+  featText: { marginTop: 4, fontSize: 14, lineHeight: 20, color: "#8E8E93" },
+  linkCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-  },
-  actionTitle: { fontSize: 15, fontWeight: "600", color: "#0F172A" },
-  actionSub: { marginTop: 2, fontSize: 12, color: "#8E8E93" },
-  sectionTitle: {
-    marginTop: 8,
-    marginBottom: 10,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  plan: {
-    backgroundColor: "#fff",
+    backgroundColor: "#F2F2F7",
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
+    marginTop: 8,
   },
-  planTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  planName: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  discountPill: {
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+  linkTitle: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
+  linkSub: { marginTop: 2, fontSize: 13, color: "#8E8E93" },
+  dock: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    // Установлено выше плавающего таб-бара (высота таб-бара ~56 + отступ снизу 10 + зазор)
+    bottom: 74,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 8,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E5E5EA",
   },
-  discountText: { color: "#16A34A", fontWeight: "700", fontSize: 14 },
-  planDesc: { marginTop: 8, fontSize: 14, color: "#707579" },
-  planPrice: { marginTop: 12, fontSize: 22, fontWeight: "700", color: "#0F172A" },
-  planDays: { fontSize: 14, fontWeight: "500", color: "#707579" },
-  buyBtn: {
-    marginTop: 14,
-    backgroundColor: "#0F172A",
-    borderRadius: 12,
-    paddingVertical: 12,
+  dockPrice: {
+    textAlign: "center",
+    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8E8E93",
+  },
+  cta: {
+    backgroundColor: "#E8A017",
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: "center",
   },
-  buyText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  ctaText: { fontSize: 16, fontWeight: "700", color: "#1C1C1E" },
 });

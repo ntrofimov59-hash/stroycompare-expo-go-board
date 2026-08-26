@@ -9,63 +9,60 @@ import {
   ActivityIndicator,
   RefreshControl,
   Animated,
-  Dimensions,
+  useWindowDimensions,
+  Image,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api/client";
+import { Product } from "../../src/types";
+import { FadeCard } from "../../src/components/FadeCard"; // Импорт компонента анимации
 
-const { width } = Dimensions.get("window");
-const PAD = 12;
-const GAP = 8;
-const COL = (width - PAD * 2 - GAP) / 2;
-
-type Product = {
-  id: string;
-  name: string;
-  unit: string;
-  type: string;
-  description?: string;
-  category?: { name: string };
-};
-
-const NAV_TABS = [
-  { key: "board", label: "Доска" },
-  { key: "compare", label: "Сравнение" },
-  { key: "services", label: "Услуги" },
-  { key: "tech", label: "Техника" },
-] as const;
-
-const CATEGORIES = [
-  { id: "all", name: "Все", icon: "apps", lib: "ion" as const, color: "#2AABEE" },
-  { id: "cement", name: "Цемент", icon: "cube", lib: "ion" as const, color: "#78716C" },
-  { id: "metal", name: "Металл", icon: "barbell-outline", lib: "ion" as const, color: "#64748B" },
-  { id: "wood", name: "Дерево", icon: "leaf", lib: "ion" as const, color: "#16A34A" },
-  { id: "finish", name: "Отделка", icon: "brush", lib: "ion" as const, color: "#A855F7" },
-  { id: "tool", name: "Инструмент", icon: "hammer", lib: "ion" as const, color: "#F59E0B" },
-  { id: "service", name: "Услуги", icon: "construct", lib: "ion" as const, color: "#0EA5E9" },
-  { id: "rent", name: "Аренда", icon: "car-outline", lib: "ion" as const, color: "#EF4444" },
+const SLIDES = [
+  { id: "f0000001-0000-0000-0000-000000000001", title: "Цемент М500", text: "Сравните мешок за минуту" },
+  { id: "f0000001-0000-0000-0000-000000000002", title: "Арматура 12 мм", text: "Цены за тонну в вашем регионе" },
+  { id: "f0000001-0000-0000-0000-000000000003", title: "Кладка кирпича", text: "Услуги подрядчиков рядом" },
 ];
 
-function CatIcon({
-  lib,
-  name,
-  color,
-  size = 22,
+const CATEGORIES = [
+  { id: "all", name: "Все" },
+  { id: "cement", name: "Цемент" },
+  { id: "metal", name: "Металл" },
+  { id: "wood", name: "Дерево" },
+  { id: "finish", name: "Отделка" },
+  { id: "tool", name: "Инструмент" },
+  { id: "service", name: "Услуги" },
+  { id: "rent", name: "Аренда" },
+];
+
+function EmptyState({
+  icon,
+  title,
+  text,
 }: {
-  lib: "ion" | "mc";
-  name: string;
-  color: string;
-  size?: number;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  text: string;
 }) {
-  if (lib === "mc") {
-    return <MaterialCommunityIcons name={name as any} size={size} color={color} />;
-  }
-  return <Ionicons name={name as any} size={size} color={color} />;
+  return (
+    <View style={styles.emptyWrap}>
+      <Ionicons name={icon} size={48} color="#A0A0A0" />
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyText}>{text}</Text>
+    </View>
+  );
 }
 
-export default function BoardScreen() {
-  const [nav, setNav] = useState<(typeof NAV_TABS)[number]["key"]>("board");
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  const pad = Math.max(insets.left, 16);
+  const cardW = (width - pad * 2 - 10) / 2;
+
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -73,17 +70,26 @@ export default function BoardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const searchRef = useRef<TextInput>(null);
+  const sliderRef = useRef<FlatList>(null);
+  const [slide, setSlide] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const next = (slide + 1) % SLIDES.length;
+      sliderRef.current?.scrollToIndex({ index: next, animated: true });
+      setSlide(next);
+    }, 3500);
+    return () => clearInterval(t);
+  }, [slide]);
+
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
     try {
       const params: Record<string, string> = {};
       if (query) params.search = query;
-
-      if (nav === "services") params.type = "service";
-      if (nav === "board" && category === "service") params.type = "service";
-      if (nav === "tech") params.search = query || "аренда";
-      if (nav === "compare") params.type = "material";
+      if (category === "service") params.type = "service";
 
       const { data } = await api.get("/products", { params });
       let list: Product[] = data.products || [];
@@ -100,300 +106,259 @@ export default function BoardScreen() {
 
       setProducts(list);
     } catch (e) {
-      console.log("board error", e);
+      console.log("home error", e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [query, nav, category]);
+  }, [query, category]);
 
   useEffect(() => {
     setLoading(true);
     load();
   }, [load]);
 
-  const onSearch = () => setQuery(search.trim());
-
   const renderCard = ({ item }: { item: Product }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => router.push(`/(app)/product/${item.id}`)}
-    >
-      <View style={styles.cardImage}>
-        <Ionicons
-          name={item.type === "service" ? "construct-outline" : "cube-outline"}
-          size={36}
-          color="#A0A0A0"
-        />
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {item.name}
-        </Text>
-        <Text style={styles.cardMeta} numberOfLines={1}>
-          {item.category?.name || (item.type === "service" ? "Услуга" : "Материал")}
-          {" · "}
-          {item.unit}
-        </Text>
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardPrice}>Сравнить цены</Text>
-          <Ionicons name="chevron-forward" size={16} color="#2AABEE" />
+    <FadeCard>
+      <TouchableOpacity
+        style={[styles.card, { width: cardW }]}
+        activeOpacity={0.75}
+        onPress={() => router.push(`/(app)/product/${item.id}`)}
+      >
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.cardImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.cardImage}>
+            <Ionicons
+              name={item.type === "service" ? "construct-outline" : "cube-outline"}
+              size={36}
+              color="#A0A0A0"
+            />
+          </View>
+        )}
+        <View style={styles.cardBody}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.name}
+          </Text>
+          {item.description ? (
+            <Text style={styles.cardDesc} numberOfLines={2}>
+              {item.description}
+            </Text>
+          ) : (
+            <Text style={styles.cardDesc} numberOfLines={2}>
+              {item.category?.name || (item.type === "service" ? "Услуга" : "Материал")} · {item.unit}
+            </Text>
+          )}
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardPrice}>Сравнить</Text>
+            <Ionicons name="chevron-forward" size={16} color="#2AABEE" />
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </FadeCard>
   );
 
   const ListHeader = (
-    <View>
-      {/* Подсказка для режима сравнения */}
-      {nav === "compare" && (
-        <View style={styles.compareNotice}>
-          <Text style={styles.compareNoticeText}>
-            Выберите товар — откроется сравнение цен поставщиков
-          </Text>
-        </View>
-      )}
+    <View style={styles.top}>
+      <Text style={styles.slogan}>Цены на стройку — в одном месте</Text>
+      <Text style={styles.sloganSub}>Сравните поставщиков и не открывайте десять сайтов</Text>
 
-      {/* 1. Поиск + premium-баннер */}
-      <View style={styles.searchBlock}>
+      <View style={styles.searchCard}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color="#8E8E93" />
           <TextInput
+            ref={searchRef}
             style={styles.searchInput}
             placeholder="Цемент, арматура, кладка..."
             placeholderTextColor="#8E8E93"
             value={search}
             onChangeText={setSearch}
             returnKeyType="search"
-            onSubmitEditing={onSearch}
-            clearButtonMode="while-editing"
+            onSubmitEditing={() => setQuery(search.trim())}
           />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={onSearch}>
-              <Text style={styles.findBtn}>Найти</Text>
-            </TouchableOpacity>
-          )}
         </View>
-
         <TouchableOpacity
-          style={styles.premiumBanner}
-          activeOpacity={0.85}
+          style={styles.premChip}
           onPress={() => router.push("/(app)/subscription")}
         >
-          <Ionicons name="sparkles" size={16} color="#F59E0B" />
-          <Text style={styles.premiumText}>
-            Premium — скидка до 15% на цены в сравнении
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color="#F59E0B" />
+          <Ionicons name="sparkles" size={14} color="#B45309" />
+          <Text style={styles.premChipText}>−15% с Premium</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 2. Bento-категории */}
-      <View style={styles.bento}>
-        {CATEGORIES.map((item) => {
+      <FlatList
+        ref={sliderRef}
+        data={SLIDES}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(i) => i.id}
+        onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          const i = Math.round(e.nativeEvent.contentOffset.x / (width - pad * 2));
+          setSlide(i);
+        }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.slide, { width: width - pad * 2 }]}
+            onPress={() => router.push(`/(app)/product/${item.id}`)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.slideKicker}>Сравнить за минуту</Text>
+            <Text style={styles.slideTitle}>{item.title}</Text>
+            <Text style={styles.slideText}>{item.text}</Text>
+          </TouchableOpacity>
+        )}
+      />
+
+      <View style={styles.dots}>
+        {SLIDES.map((_, i) => (
+          <View key={i} style={[styles.dot, i === slide && styles.dotOn]} />
+        ))}
+      </View>
+
+      <FlatList
+        horizontal
+        data={CATEGORIES}
+        keyExtractor={(i) => i.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingVertical: 8, gap: 8 }}
+        renderItem={({ item }) => {
           const active = category === item.id;
           return (
             <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.bentoCell,
-                active && { backgroundColor: item.color, borderColor: item.color },
-              ]}
+              style={[styles.catChip, active && styles.catChipOn]}
               onPress={() => setCategory(item.id)}
-              activeOpacity={0.75}
             >
-              <View
-                style={[
-                  styles.bentoIconWrap,
-                  { backgroundColor: active ? "rgba(255,255,255,0.25)" : `${item.color}18` },
-                ]}
-              >
-                <CatIcon
-                  lib={item.lib}
-                  name={item.icon}
-                  color={active ? "#FFFFFF" : item.color}
-                  size={20}
-                />
-              </View>
-              <Text
-                style={[styles.bentoLabel, active && { color: "#FFFFFF" }]}
-                numberOfLines={1}
-              >
-                {item.name}
-              </Text>
+              <Text style={[styles.catChipText, active && { color: "#fff" }]}>{item.name}</Text>
             </TouchableOpacity>
           );
-        })}
-      </View>
-
-      {/* 3. Доска / Сравнение / ... */}
-      <View style={styles.nav}>
-        {NAV_TABS.map((t) => {
-          const active = nav === t.key;
-          return (
-            <TouchableOpacity
-              key={t.key}
-              style={[styles.navItem, active && styles.navItemActive]}
-              onPress={() => setNav(t.key)}
-            >
-              <Text style={[styles.navText, active && styles.navTextActive]}>
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        }}
+      />
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      {loading && products.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator color="#2AABEE" />
-        </View>
-      ) : (
-        <Animated.FlatList
-          data={products}
-          keyExtractor={(i) => i.id}
-          renderItem={renderCard}
-          numColumns={2}
-          columnWrapperStyle={styles.cardRow}
-          ListHeaderComponent={ListHeader}
-          contentContainerStyle={styles.feed}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
-              tintColor="#2AABEE"
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <Text style={styles.empty}>Объявлений пока нет</Text>
-            </View>
-          }
-        />
-      )}
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: insets.top }}>
+      <View style={[styles.container]}>
+        {loading && products.length === 0 ? (
+          <View style={styles.center}>
+            <ActivityIndicator color="#2AABEE" />
+          </View>
+        ) : (
+          <Animated.FlatList
+            data={products}
+            keyExtractor={(i) => i.id}
+            renderItem={renderCard}
+            numColumns={2}
+            columnWrapperStyle={[styles.cardRow, { paddingHorizontal: pad }]}
+            ListHeaderComponent={ListHeader}
+            contentContainerStyle={styles.feed}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => {
+                  setRefreshing(true);
+                  load();
+                }}
+                tintColor="#2AABEE"
+              />
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon="cube-outline"
+                title="Нет позиций"
+                text="Измените категорию или поисковый запрос"
+              />
+            }
+          />
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F4F5" },
-
-  compareNotice: {
-    padding: 12,
-    backgroundColor: "#EFF6FF",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#DBEAFE",
-  },
-  compareNoticeText: { color: "#1D4ED8", fontWeight: "600", fontSize: 13 },
-
-  searchBlock: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: PAD,
-    paddingTop: 8,
-    paddingBottom: 10,
+  container: { flex: 1, backgroundColor: "#F2F2F7" },
+  top: { backgroundColor: "#fff", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  slogan: { fontSize: 22, fontWeight: "800", color: "#0F172A" },
+  sloganSub: { marginTop: 4, marginBottom: 14, fontSize: 14, color: "#8E8E93", lineHeight: 20 },
+  searchCard: {
+    backgroundColor: "#F2F2F7",
+    borderRadius: 16,
+    padding: 8,
+    marginBottom: 14,
   },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F1F1",
+    backgroundColor: "#fff",
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
     gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 15, color: "#0F172A", paddingVertical: 0 },
-  findBtn: { color: "#2AABEE", fontWeight: "700", fontSize: 14 },
-  premiumBanner: {
-    marginTop: 10,
+  searchInput: { flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 0 },
+  premChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FFFBEB",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-  },
-  premiumText: { flex: 1, fontSize: 13, color: "#92400E", fontWeight: "600" },
-
-  bento: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: PAD,
-    paddingTop: 12,
-    paddingBottom: 4,
-    gap: GAP,
-    backgroundColor: "#FFFFFF",
-  },
-  bentoCell: {
-    width: COL,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  bentoIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bentoLabel: { fontSize: 13, fontWeight: "600", color: "#0F172A", flex: 1 },
-
-  nav: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    gap: 6,
+    marginTop: 8,
     paddingHorizontal: 8,
-    marginBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E4E4E7",
+    paddingVertical: 6,
   },
-  navItem: { paddingVertical: 12, paddingHorizontal: 12, marginRight: 2 },
-  navItemActive: { borderBottomWidth: 2, borderBottomColor: "#2AABEE" },
-  navText: { fontSize: 15, color: "#707579", fontWeight: "500" },
-  navTextActive: { color: "#0F172A", fontWeight: "700" },
+  premChipText: { fontSize: 13, fontWeight: "700", color: "#B45309" },
 
-  feed: { paddingBottom: 32 },
+  slide: {
+    backgroundColor: "#0F172A",
+    borderRadius: 16,
+    padding: 18,
+  },
+  slideKicker: { color: "#94A3B8", fontSize: 12, fontWeight: "600" },
+  slideTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginTop: 8 },
+  slideText: { color: "#CBD5E1", marginTop: 6, fontSize: 14 },
+  dots: { flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 10, marginBottom: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#D4D4D8" },
+  dotOn: { backgroundColor: "#2AABEE", width: 16 },
+
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: "#F2F2F7",
+  },
+  catChipOn: { backgroundColor: "#2AABEE" },
+  catChipText: { fontSize: 13, fontWeight: "600", color: "#0F172A" },
+
+  feed: { paddingBottom: 100 },
   cardRow: {
     justifyContent: "space-between",
-    paddingHorizontal: PAD,
     marginBottom: 10,
   },
   card: {
-    width: COL,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    backgroundColor: "#fff",
+    borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardImage: {
-    height: 100,
+    width: "100%",
+    height: 140,
     backgroundColor: "#EEF0F3",
     alignItems: "center",
     justifyContent: "center",
   },
   cardBody: { padding: 10 },
-  cardTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A", minHeight: 36 },
-  cardMeta: { marginTop: 4, fontSize: 11, color: "#8E8E93" },
+  cardTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A", minHeight: 40 },
+  cardDesc: { marginTop: 4, fontSize: 12, lineHeight: 16, color: "#52525B", minHeight: 32 },
   cardFooter: {
     marginTop: 8,
     flexDirection: "row",
@@ -403,6 +368,7 @@ const styles = StyleSheet.create({
   cardPrice: { fontSize: 13, fontWeight: "700", color: "#2AABEE" },
 
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyWrap: { paddingTop: 40, alignItems: "center" },
-  empty: { color: "#707579", fontSize: 15 },
+  emptyWrap: { paddingTop: 60, alignItems: "center", paddingHorizontal: 24 },
+  emptyTitle: { marginTop: 12, fontSize: 16, fontWeight: "600", color: "#0F172A" },
+  emptyText: { marginTop: 6, fontSize: 13, color: "#8E8E93", textAlign: "center" },
 });

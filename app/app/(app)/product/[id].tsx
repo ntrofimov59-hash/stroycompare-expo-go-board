@@ -8,8 +8,10 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../../src/api/client";
 import { useSettingsStore } from "../../../src/store/settings";
 
@@ -24,10 +26,12 @@ type Offer = {
   supports_discount: boolean;
   currency: string;
   supplier: {
+    id: string;
     company_name: string;
     rating: number;
     reviews_count: number;
     is_verified: boolean;
+    phone?: string;
   };
   region: {
     name: string;
@@ -81,22 +85,39 @@ export default function ProductCompareScreen() {
       maximumFractionDigits: 2,
     }).format(n) + " ₽";
 
+  const handleContact = (item: Offer) => {
+    const supplierName = item.supplier.company_name;
+    const phone = item.supplier.phone;
+
+    if (phone) {
+      Alert.alert(
+        supplierName,
+        `Телефон для связи: ${phone}`,
+        [
+          { text: "Закрыть", style: "cancel" },
+          { 
+            text: "Написать в чат", 
+            onPress: () => router.push(`/(app)/chat/${item.supplier.id}`) 
+          }
+        ]
+      );
+    } else {
+      router.push(`/(app)/chat/${item.supplier.id}`);
+    }
+  };
+
   const renderOffer = ({ item, index }: { item: Offer; index: number }) => {
     const hasDiscount = item.discount_percent > 0 && item.final_price < item.price;
     const isBest = index === 0 && sort === "price_asc";
-
-    // Расчет экономии на лучшем предложении, если есть подписка
     const best = isBest ? offers[0] : null;
-    const saved =
-      best && best.discount_percent > 0
-        ? best.price - best.final_price
-        : 0;
+    const saved = best && best.discount_percent > 0 ? best.price - best.final_price : 0;
 
     return (
       <View>
         <View style={[styles.card, isBest && styles.cardBest]}>
           {isBest && (
             <View style={styles.bestBadge}>
+              <Ionicons name="flash" size={12} color="#FFFFFF" />
               <Text style={styles.bestBadgeText}>Лучшая цена</Text>
             </View>
           )}
@@ -104,56 +125,75 @@ export default function ProductCompareScreen() {
           <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
               <View style={styles.supplierRow}>
-                <Text style={styles.supplierName}>{item.supplier.company_name}</Text>
+                <Text style={styles.supplierName} numberOfLines={1}>{item.supplier.company_name}</Text>
                 {item.supplier.is_verified && (
-                  <Text style={styles.verified}>✓</Text>
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  </View>
                 )}
               </View>
-              <Text style={styles.rating}>
-                ★ {item.supplier.rating.toFixed(1)}
-                {item.supplier.reviews_count > 0
-                  ? ` · ${item.supplier.reviews_count} отзывов`
-                  : ""}
-              </Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={13} color="#F59E0B" />
+                <Text style={styles.ratingText}>
+                  {item.supplier.rating.toFixed(1)}
+                  {item.supplier.reviews_count > 0 ? ` · ${item.supplier.reviews_count} отзывов` : " · Новый"}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.region}>{item.region?.name}</Text>
+            <View style={styles.regionBadge}>
+              <Ionicons name="location-outline" size={12} color="#71717A" />
+              <Text style={styles.regionText}>{item.region?.name || "Регион"}</Text>
+            </View>
           </View>
 
-          <View style={styles.priceBlock}>
-            {hasDiscount ? (
-              <>
+          <View style={styles.priceSection}>
+            <View>
+              {hasDiscount && (
                 <Text style={styles.oldPrice}>{formatPrice(item.price)}</Text>
-                <Text style={styles.finalPrice}>{formatPrice(item.final_price)}</Text>
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>−{item.discount_percent}%</Text>
-                </View>
-              </>
-            ) : (
-              <Text style={styles.finalPrice}>{formatPrice(item.price)}</Text>
+              )}
+              <Text style={styles.finalPrice}>{formatPrice(hasDiscount ? item.final_price : item.price)}</Text>
+            </View>
+            {hasDiscount && (
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>−{item.discount_percent}%</Text>
+              </View>
             )}
           </View>
 
-          <View style={styles.metaRow}>
-            <Text style={styles.meta}>
-              от {item.min_order_qty} {product?.unit || "шт"}
-            </Text>
+          <View style={styles.specsRow}>
+            <View style={styles.specItem}>
+              <Ionicons name="cube-outline" size={14} color="#71717A" />
+              <Text style={styles.specText}>от {item.min_order_qty} {product?.unit || "шт"}</Text>
+            </View>
             {item.delivery_days != null && (
-              <Text style={styles.meta}>· {item.delivery_days} дн.</Text>
+              <View style={styles.specItem}>
+                <Ionicons name="time-outline" size={14} color="#71717A" />
+                <Text style={styles.specText}>{item.delivery_days} дн.</Text>
+              </View>
             )}
             {item.stock_qty != null && (
-              <Text style={styles.meta}>· в наличии {item.stock_qty}</Text>
+              <View style={styles.specItem}>
+                <Ionicons name="layers-outline" size={14} color="#71717A" />
+                <Text style={styles.specText}>в наличии: {item.stock_qty}</Text>
+              </View>
             )}
           </View>
 
-          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <Text style={styles.actionText}>Связаться</Text>
+          <TouchableOpacity 
+            style={styles.actionBtn} 
+            activeOpacity={0.8}
+            onPress={() => handleContact(item)}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.actionText}>Связаться с поставщиком</Text>
           </TouchableOpacity>
         </View>
 
         {hasSub && isBest && saved > 0 && (
           <View style={styles.savingsBanner}>
+            <Ionicons name="trending-down" size={14} color="#16A34A" />
             <Text style={styles.savingsText}>
-              Экономия на лучшем предложении: ~{saved.toFixed(0)} ₽
+              Экономия по сравнению со средней ценой: ~{saved.toFixed(0)} ₽
             </Text>
           </View>
         )}
@@ -164,7 +204,7 @@ export default function ProductCompareScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#2AABEE" size="large" />
+        <ActivityIndicator color="#0284C7" size="large" />
       </View>
     );
   }
@@ -173,8 +213,10 @@ export default function ProductCompareScreen() {
     <>
       <Stack.Screen
         options={{
-          title: product?.name || "Сравнение",
+          title: product?.name || "Сравнение цен",
           headerBackTitle: "Назад",
+          headerTintColor: "#0F172A",
+          headerStyle: { backgroundColor: "#FFFFFF" },
         }}
       />
 
@@ -183,8 +225,8 @@ export default function ProductCompareScreen() {
         <View style={styles.productHeader}>
           <Text style={styles.productName}>{product?.name}</Text>
           <Text style={styles.productMeta}>
-            {product?.category?.name}
-            {product?.unit ? ` · ${product.unit}` : ""}
+            {product?.category?.name || "Категория"}
+            {product?.unit ? ` · Ед. изм: ${product.unit}` : ""}
           </Text>
           {product?.description ? (
             <Text style={styles.productDesc} numberOfLines={2}>
@@ -194,61 +236,46 @@ export default function ProductCompareScreen() {
 
           {hasSub ? (
             <View style={styles.subBanner}>
-              <Text style={styles.subBannerText}>Ваша скидка по подписке применена</Text>
+              <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+              <Text style={styles.subBannerText}>Премиум-доступ активен: оптовые цены применены</Text>
             </View>
           ) : (
             <TouchableOpacity
-              style={{
-                marginTop: 12,
-                backgroundColor: "#FFFBEB",
-                borderRadius: 10,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: "#FDE68A",
-              }}
+              style={styles.promoBox}
+              activeOpacity={0.8}
               onPress={() => router.push("/(app)/subscription")}
             >
-              <Text style={{ color: "#92400E", fontWeight: "700", fontSize: 13 }}>
-                С Premium цены ниже на 5–15%
-              </Text>
-              <Text style={{ color: "#A16207", fontSize: 12, marginTop: 4 }}>
-                Подключить скидку →
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.promoTitle}>Скидки по подписке Premium 5–15%</Text>
+                <Text style={styles.promoSub}>Разблокируйте эксклюзивные предложения →</Text>
+              </View>
+              <Ionicons name="shield-checkmark" size={24} color="#D97706" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Сортировка */}
+        {/* Панель сортировки */}
         <View style={styles.sortRow}>
-          <Text style={styles.sortLabel}>Сортировка:</Text>
+          <Text style={styles.sortLabel}>Сортировать:</Text>
           <TouchableOpacity
             style={[styles.sortChip, sort === "price_asc" && styles.sortChipActive]}
             onPress={() => setSort("price_asc")}
           >
-            <Text
-              style={[
-                styles.sortChipText,
-                sort === "price_asc" && styles.sortChipTextActive,
-              ]}
-            >
-              Дешевле
+            <Text style={[styles.sortChipText, sort === "price_asc" && styles.sortChipTextActive]}>
+              Сначала дешевле
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.sortChip, sort === "price_desc" && styles.sortChipActive]}
             onPress={() => setSort("price_desc")}
           >
-            <Text
-              style={[
-                styles.sortChipText,
-                sort === "price_desc" && styles.sortChipTextActive,
-              ]}
-            >
-              Дороже
+            <Text style={[styles.sortChipText, sort === "price_desc" && styles.sortChipTextActive]}>
+              Сначала дороже
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Список офферов */}
         <FlatList
           data={offers}
           keyExtractor={(item) => item.id}
@@ -261,12 +288,14 @@ export default function ProductCompareScreen() {
                 setRefreshing(true);
                 load();
               }}
-              tintColor="#2AABEE"
+              tintColor="#0284C7"
             />
           }
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.empty}>Нет предложений в этом регионе</Text>
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={48} color="#A1A1AA" />
+              <Text style={styles.emptyTitle}>Предложений пока нет</Text>
+              <Text style={styles.emptyDesc}>В выбранном регионе никто из поставщиков еще не выставил этот товар</Text>
             </View>
           }
         />
@@ -276,30 +305,47 @@ export default function ProductCompareScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F4F5" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
   productHeader: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E4E4E7",
+    paddingTop: 14,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  productName: { fontSize: 18, fontWeight: "600", color: "#0F172A" },
-  productMeta: { marginTop: 4, fontSize: 13, color: "#707579" },
-  productDesc: { marginTop: 8, fontSize: 14, color: "#3F3F46", lineHeight: 20 },
+  productName: { fontSize: 20, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 },
+  productMeta: { marginTop: 4, fontSize: 13, color: "#64748B", fontWeight: "500" },
+  productDesc: { marginTop: 8, fontSize: 14, color: "#334155", lineHeight: 20 },
   subBanner: {
-    marginTop: 12,
-    backgroundColor: "#ECFDF5",
-    paddingVertical: 8,
+    marginTop: 14,
+    backgroundColor: "#F0FDF4",
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#DCFCE7",
   },
-  subBannerText: { color: "#15803D", fontSize: 13, fontWeight: "600" },
+  subBannerText: { color: "#166534", fontSize: 13, fontWeight: "600" },
+  promoBox: {
+    marginTop: 14,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#FEF3C7",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  promoTitle: { color: "#92400E", fontWeight: "700", fontSize: 13 },
+  promoSub: { color: "#B45309", fontSize: 12, marginTop: 2, fontWeight: "500" },
   savingsBanner: {
     marginTop: -4,
-    marginBottom: 10,
+    marginBottom: 12,
     marginHorizontal: 4,
     backgroundColor: "#F0FDF4",
     paddingVertical: 8,
@@ -307,83 +353,122 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#DCFCE7",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  savingsText: {
-    color: "#16A34A",
-    fontSize: 13,
-    fontWeight: "600",
-  },
+  savingsText: { color: "#15803D", fontSize: 13, fontWeight: "600" },
   sortRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: 8,
   },
-  sortLabel: { fontSize: 13, color: "#707579", marginRight: 4 },
+  sortLabel: { fontSize: 13, color: "#64748B", fontWeight: "500" },
   sortChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
     backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
-  sortChipActive: { backgroundColor: "#2AABEE" },
-  sortChipText: { fontSize: 13, color: "#0F172A" },
+  sortChipActive: { backgroundColor: "#0F172A", borderColor: "#0F172A" },
+  sortChipText: { fontSize: 13, color: "#475569", fontWeight: "500" },
   sortChipTextActive: { color: "#FFFFFF", fontWeight: "600" },
-  list: { padding: 12, paddingBottom: 24 },
+  list: { padding: 16, paddingBottom: 32 },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardBest: {
+    borderColor: "#0284C7",
     borderWidth: 1.5,
-    borderColor: "#2AABEE",
+    backgroundColor: "#F8FAFC",
   },
   bestBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#2AABEE",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  bestBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  cardHeader: { flexDirection: "row", alignItems: "flex-start" },
-  supplierRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  supplierName: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
-  verified: { color: "#2AABEE", fontWeight: "700", fontSize: 14 },
-  rating: { marginTop: 2, fontSize: 13, color: "#707579" },
-  region: { fontSize: 12, color: "#A0A0A0" },
-  priceBlock: {
+    backgroundColor: "#0284C7",
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
-    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+    marginBottom: 10,
+  },
+  bestBadgeText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
+  cardHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  supplierRow: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "80%" },
+  supplierName: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+  verifiedBadge: {
+    backgroundColor: "#0284C7",
+    borderRadius: 8,
+    width: 14,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 },
+  ratingText: { fontSize: 13, color: "#64748B", fontWeight: "500" },
+  regionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  regionText: { fontSize: 11, color: "#64748B", fontWeight: "500" },
+  priceSection: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
   },
   oldPrice: {
-    fontSize: 14,
-    color: "#A0A0A0",
+    fontSize: 13,
+    color: "#94A3B8",
     textDecorationLine: "line-through",
+    fontWeight: "500",
   },
-  finalPrice: { fontSize: 22, fontWeight: "700", color: "#0F172A" },
+  finalPrice: { fontSize: 22, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
   discountBadge: {
     backgroundColor: "#DCFCE7",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
   },
   discountText: { color: "#16A34A", fontSize: 12, fontWeight: "700" },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 8, gap: 6 },
-  meta: { fontSize: 13, color: "#707579" },
+  specsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12, gap: 12 },
+  specItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  specText: { fontSize: 12, color: "#64748B", fontWeight: "500" },
   actionBtn: {
-    marginTop: 12,
+    marginTop: 16,
     backgroundColor: "#0F172A",
-    borderRadius: 10,
-    paddingVertical: 11,
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
-  actionText: { color: "#FFFFFF", fontWeight: "600", fontSize: 15 },
-  empty: { color: "#707579", fontSize: 15 },
+  actionText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
+  emptyContainer: { alignItems: "center", justifyContent: "center", paddingTop: 60, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A", marginTop: 12 },
+  emptyDesc: { fontSize: 14, color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 20 },
 });

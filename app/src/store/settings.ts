@@ -1,47 +1,66 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-type SettingsState = {
+export type ThemeMode = "system" | "light" | "dark";
+export type LanguageCode = "ru" | "en";
+
+interface SettingsState {
   regionId: string;
   regionName: string;
-  setRegion: (id: string, name: string) => Promise<void>;
-  load: () => Promise<void>;
-};
+  theme: ThemeMode;
+  language: LanguageCode;
+  
+  setRegion: (id: string, name: string) => void;
+  setTheme: (theme: ThemeMode) => void;
+  setLanguage: (language: LanguageCode) => void;
+}
 
-const storage = {
-  async get(key: string) {
-    if (Platform.OS === "web") return localStorage.getItem(key);
-    return SecureStore.getItemAsync(key);
-  },
-  async set(key: string, value: string) {
+// Кастомный сторадж на базе твоих проверенных SecureStore / localStorage
+const customStorage = {
+  getItem: async (name: string): Promise<string | null> => {
     if (Platform.OS === "web") {
-      localStorage.setItem(key, value);
+      return localStorage.getItem(name);
+    }
+    return await SecureStore.getItemAsync(name);
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    if (Platform.OS === "web") {
+      localStorage.setItem(name, value);
       return;
     }
-    await SecureStore.setItemAsync(key, value);
+    await SecureStore.setItemAsync(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    if (Platform.OS === "web") {
+      localStorage.removeItem(name);
+      return;
+    }
+    await SecureStore.deleteItemAsync(name);
   },
 };
 
-// Москва из seed
 const DEFAULT_REGION = {
   id: "a0000001-0000-0000-0000-000000000001",
-  name: "Москва",
+  name: "Москва и область",
 };
 
-export const useSettingsStore = create<SettingsState>((set) => ({
-  regionId: DEFAULT_REGION.id,
-  regionName: DEFAULT_REGION.name,
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      regionId: DEFAULT_REGION.id,
+      regionName: DEFAULT_REGION.name,
+      theme: "system",
+      language: "ru",
 
-  setRegion: async (id, name) => {
-    await storage.set("region_id", id);
-    await storage.set("region_name", name);
-    set({ regionId: id, regionName: name });
-  },
-
-  load: async () => {
-    const id = (await storage.get("region_id")) || DEFAULT_REGION.id;
-    const name = (await storage.get("region_name")) || DEFAULT_REGION.name;
-    set({ regionId: id, regionName: name });
-  },
-}));
+      setRegion: (id, name) => set({ regionId: id, regionName: name }),
+      setTheme: (theme) => set({ theme }),
+      setLanguage: (language) => set({ language }),
+    }),
+    {
+      name: "settings-storage",
+      storage: createJSONStorage(() => customStorage),
+    }
+  )
+);
