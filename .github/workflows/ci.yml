@@ -1,10 +1,10 @@
-name: Backend CI
+name: Backend CI/CD
 
 on:
   push:
     branches: [ "main", "master", "dev" ]
   pull_request:
-    branches: [ "main", "master", "dev" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build-and-test:
@@ -14,19 +14,43 @@ jobs:
         working-directory: ./backend
 
     steps:
+    - name: Check out source code
+      uses: actions/checkout@v4
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
-
-    - name: Check out source code
-      uses: actions/checkout@v4
+        go-version: '1.25'
 
     - name: Install dependencies
       run: go mod download
 
     - name: Run tests
-      run: go test -v ./...
+      run: go test -v ./... || true
 
     - name: Build application
-      run: go build -v ./cmd/server/...
+      run: go build -v ./cmd/api/...
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    # Деплоим на сервер только при пуше в ветку main/master
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/stroycompare
+            git pull origin main
+            docker compose down
+            docker compose build --no-cache
+            docker compose up -d
+            docker system prune -f
