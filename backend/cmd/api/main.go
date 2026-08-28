@@ -59,13 +59,12 @@ func main() {
 	// API v1
 	v1 := r.Group("/api/v1")
 	{
-		auth.RegisterRoutes(v1, db, cfg)
+		auth.RegisterRoutes(v1, db, rdb, cfg)
 		catalog.RegisterRoutes(v1, db, cfg)
 		subscriptions.RegisterRoutes(v1, db, cfg)
 		listings.RegisterRoutes(v1, db, cfg)
 		offers.RegisterRoutes(v1, db, cfg)
 		users.RegisterRoutes(v1, db, cfg)
-		_ = rdb
 	}
 
 	port := os.Getenv("APP_PORT")

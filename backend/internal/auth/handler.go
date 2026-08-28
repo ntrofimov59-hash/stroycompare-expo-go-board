@@ -1,16 +1,27 @@
 package auth
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/stroycompare/backend/internal/config"
 	"github.com/stroycompare/backend/internal/models"
 	"github.com/stroycompare/backend/pkg/response"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// hashToken делает детерминированный SHA-256 хэш токена для хранения/поиска в БД.
+// Это не пароль (энтропия самого JWT достаточна), поэтому bcrypt здесь избыточен
+// и не подходит — нужен быстрый и воспроизводимый lookup по hash.
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
 
 type Handler struct {
 	db  *gorm.DB
@@ -33,6 +44,10 @@ type registerRequest struct {
 type loginRequest struct {
 	Login    string `json:"login" binding:"required"` // email или phone
 	Password string `json:"password" binding:"required"`
+}
+
+type refreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
 type tokenResponse struct {
@@ -187,13 +202,124 @@ func (h *Handler) generateTokens(user models.User) (access, refresh string, expi
 		return
 	}
 
+	refreshExpiresAt := time.Now().Add(h.cfg.JWTRefreshTTL)
 	refreshClaims := jwt.MapClaims{
 		"user_id": user.ID.String(),
-		"exp":     time.Now().Add(h.cfg.JWTRefreshTTL).Unix(),
+		"exp":     refreshExpiresAt.Unix(),
 		"iat":     time.Now().Unix(),
 		"type":    "refresh",
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	refresh, err = refreshToken.SignedString([]byte(h.cfg.JWTRefreshSecret))
+	if err != nil {
+		return
+	}
+
+	// Сохраняем хэш refresh-токена, чтобы его можно было провалидировать
+	// на /auth/refresh и отозвать на /auth/logout.
+	record := models.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: hashToken(refresh),
+		ExpiresAt: refreshExpiresAt,
+	}
+	if dbErr := h.db.Create(&record).Error; dbErr != nil {
+		err = dbErr
+		return
+	}
+
 	return
+}
+
+// POST /api/v1/auth/refresh
+func (h *Handler) Refresh(c *gin.Context) {
+	var req refreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "refresh_token is required")
+		return
+	}
+
+	// 1. Токен должен быть валидным JWT, подписанным refresh-секретом
+	token, err := jwt.Parse(req.RefreshToken, func(t *jwt.Token) (interface{}, error) {
+		return []byte(h.cfg.JWTRefreshSecret), nil
+	})
+	if err != nil || !token.Valid {
+		response.Unauthorized(c, "invalid or expired refresh token")
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["type"] != "refresh" {
+		response.Unauthorized(c, "invalid refresh token")
+		return
+	}
+
+	// 2. Токен должен присутствовать в БД и быть не отозванным/не истёкшим —
+	// это позволяет отзывать конкретные refresh-токены (logout) и защищаться
+	// от повторного использования украденного токена.
+	tokenHash := hashToken(req.RefreshToken)
+	var stored models.RefreshToken
+	if err := h.db.Where("token_hash = ? AND expires_at > ?", tokenHash, time.Now()).
+		First(&stored).Error; err != nil {
+		response.Unauthorized(c, "refresh token not recognized or revoked")
+		return
+	}
+
+	var user models.User
+	if err := h.db.First(&user, "id = ?", stored.UserID).Error; err != nil {
+		response.Unauthorized(c, "user not found")
+		return
+	}
+	if !user.IsActive {
+		response.Forbidden(c, "account is disabled")
+		return
+	}
+
+	// 3. Ротация: старый refresh-токен удаляем, выдаём новую пару.
+	h.db.Delete(&stored)
+
+	access, refresh, expiresIn, err := h.generateTokens(user)
+	if err != nil {
+		response.Internal(c, "failed to generate tokens")
+		return
+	}
+
+	user.PasswordHash = ""
+	response.OK(c, tokenResponse{
+		AccessToken:  access,
+		RefreshToken: refresh,
+		ExpiresIn:    expiresIn,
+		User:         user,
+	})
+}
+
+// POST /api/v1/auth/logout
+func (h *Handler) Logout(c *gin.Context) {
+	var req refreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "refresh_token is required")
+		return
+	}
+
+	tokenHash := hashToken(req.RefreshToken)
+	h.db.Where("token_hash = ?", tokenHash).Delete(&models.RefreshToken{})
+
+	response.OK(c, gin.H{"success": true})
+}
+
+// LogoutAll отзывает все refresh-токены пользователя (например, "выйти со всех устройств").
+// POST /api/v1/users/me/logout-all
+func (h *Handler) LogoutAll(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "unauthorized")
+		return
+	}
+	uid, ok := userID.(uuid.UUID)
+	if !ok {
+		response.Unauthorized(c, "unauthorized")
+		return
+	}
+
+	h.db.Where("user_id = ?", uid).Delete(&models.RefreshToken{})
+	response.OK(c, gin.H{"success": true})
 }
