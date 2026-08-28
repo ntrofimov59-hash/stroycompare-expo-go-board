@@ -13,9 +13,11 @@ import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSettingsStore } from "../../src/store/settings";
 import { useAuthStore } from "../../src/store/auth";
+import { useThemeStore } from "../../src/store/theme";
 
 export default function SettingsScreen() {
-  const { regionName, theme, setTheme, language, setLanguage } = useSettingsStore();
+  const { regionName, language, setLanguage } = useSettingsStore();
+  const { mode, setMode, colors } = useThemeStore();
   const { accessToken, logout } = useAuthStore();
 
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -58,108 +60,120 @@ export default function SettingsScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Настройки" }} />
-      <ScrollView style={s.wrap} contentContainerStyle={s.content}>
+      <ScrollView style={[s.wrap, { backgroundColor: colors.bg }]} contentContainerStyle={s.content}>
         
         {/* Аккаунт */}
-        <Text style={s.group}>Аккаунт</Text>
+        <Text style={[s.group, { color: colors.muted }]}>Аккаунт</Text>
         <TouchableOpacity
-          style={s.row}
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
           onPress={() => {
             if (!accessToken) router.push("/(auth)/login");
           }}
         >
-          <View style={s.avatarBox}>
-            <Ionicons name="person" size={20} color="#64748B" />
+          <View style={[s.avatarBox, { backgroundColor: mode === "dark" ? "#21262d" : "#F1F5F9" }]}>
+            <Ionicons name="person" size={20} color={colors.muted} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.title}>
+            <Text style={[s.title, { color: colors.text }]}>
               {accessToken ? "Личный кабинет поставщика" : "Войти в систему"}
             </Text>
-            <Text style={s.sub}>
+            <Text style={[s.sub, { color: colors.muted }]}>
               {accessToken ? "Управление реквизитами и доступом" : "Авторизуйтесь для публикации цен"}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </TouchableOpacity>
 
         {/* Основные */}
-        <Text style={s.group}>Основные</Text>
+        <Text style={[s.group, { color: colors.muted }]}>Основные</Text>
         
         <TouchableOpacity
-          style={s.row}
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
           onPress={() => Alert.alert("Регион", "Выбор региона доступен на главном экране или через фильтры")}
         >
-          <Ionicons name="location-outline" size={20} color="#0F172A" />
+          <Ionicons name="location-outline" size={20} color={colors.text} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.title}>Регион доставки и цен</Text>
-            <Text style={s.sub}>{regionName || "Москва и область"}</Text>
+            <Text style={[s.title, { color: colors.text }]}>Регион доставки и цен</Text>
+            <Text style={[s.sub, { color: colors.muted }]}>{regionName || "Москва и область"}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </TouchableOpacity>
 
-        <View style={s.row}>
-          <Ionicons name="notifications-outline" size={20} color="#0F172A" />
+        <View style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Ionicons name="notifications-outline" size={20} color={colors.text} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.title}>Пуш-уведомления</Text>
-            <Text style={s.sub}>О новых заказах и ответах</Text>
+            <Text style={[s.title, { color: colors.text }]}>Пуш-уведомления</Text>
+            <Text style={[s.sub, { color: colors.muted }]}>О новых заказах и ответах</Text>
           </View>
           <Switch
             value={pushEnabled}
             onValueChange={setPushEnabled}
-            trackColor={{ false: "#E4E4E7", true: "#2AABEE" }}
+            trackColor={{ false: mode === "dark" ? "#30363d" : "#E4E4E7", true: "#2AABEE" }}
           />
         </View>
 
         {/* Внешний вид и Мультиязычность */}
-        <Text style={s.group}>Интерфейс</Text>
+        <Text style={[s.group, { color: colors.muted }]}>Интерфейс</Text>
 
-        <TouchableOpacity style={s.row} onPress={() => setThemeModalVisible(true)}>
-          <Ionicons name="moon-outline" size={20} color="#0F172A" />
+        <TouchableOpacity 
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
+          onPress={() => setThemeModalVisible(true)}
+        >
+          <Ionicons name="moon-outline" size={20} color={colors.text} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.title}>Тема оформления</Text>
-            <Text style={s.sub}>{getThemeTitle(theme)}</Text>
+            <Text style={[s.title, { color: colors.text }]}>Тема оформления</Text>
+            <Text style={[s.sub, { color: colors.muted }]}>{getThemeTitle(mode)}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.row} onPress={() => setLangModalVisible(true)}>
-          <Ionicons name="language-outline" size={20} color="#0F172A" />
+        <TouchableOpacity 
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
+          onPress={() => setLangModalVisible(true)}
+        >
+          <Ionicons name="language-outline" size={20} color={colors.text} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.title}>Язык / Language</Text>
-            <Text style={s.sub}>{language === "ru" ? "Русский" : "English"}</Text>
+            <Text style={[s.title, { color: colors.text }]}>Язык / Language</Text>
+            <Text style={[s.sub, { color: colors.muted }]}>{language === "ru" ? "Русский" : "English"}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </TouchableOpacity>
 
         {/* Данные и память */}
-        <Text style={s.group}>Данные и хранилище</Text>
-        <TouchableOpacity style={s.row} onPress={clearCache}>
-          <Ionicons name="trash-bin-outline" size={20} color="#0F172A" />
+        <Text style={[s.group, { color: colors.muted }]}>Данные и хранилище</Text>
+        <TouchableOpacity 
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
+          onPress={clearCache}
+        >
+          <Ionicons name="trash-bin-outline" size={20} color={colors.text} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.title}>Очистить кэш</Text>
-            <Text style={s.sub}>Освободить память на устройстве</Text>
+            <Text style={[s.title, { color: colors.text }]}>Очистить кэш</Text>
+            <Text style={[s.sub, { color: colors.muted }]}>Освободить память на устройстве</Text>
           </View>
         </TouchableOpacity>
 
         {/* О сервисе */}
-        <Text style={s.group}>О сервисе</Text>
-        <TouchableOpacity style={s.row} onPress={() => router.push("/(app)/about")}>
-          <Ionicons name="information-circle-outline" size={20} color="#0F172A" />
-          <Text style={[s.title, { marginLeft: 12, flex: 1 }]}>Как это работает</Text>
-          <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+        <Text style={[s.group, { color: colors.muted }]}>О сервисе</Text>
+        <TouchableOpacity 
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
+          onPress={() => router.push("/(app)/about")}
+        >
+          <Ionicons name="information-circle-outline" size={20} color={colors.text} />
+          <Text style={[s.title, { marginLeft: 12, flex: 1, color: colors.text }]}>Как это работает</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={s.row}
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
           onPress={() => Alert.alert("Поддержка", "Напишите нам в Telegram: @support_market")}
         >
-          <Ionicons name="chatbubbles-outline" size={20} color="#0F172A" />
-          <Text style={[s.title, { marginLeft: 12, flex: 1 }]}>Служба поддержки</Text>
-          <Ionicons name="open-outline" size={16} color="#8E8E93" />
+          <Ionicons name="chatbubbles-outline" size={20} color={colors.text} />
+          <Text style={[s.title, { marginLeft: 12, flex: 1, color: colors.text }]}>Служба поддержки</Text>
+          <Ionicons name="open-outline" size={16} color={colors.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[s.row, { marginTop: 24, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#E5E5EA" }]} 
+          style={[s.row, { marginTop: 24, backgroundColor: colors.card, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, borderBottomColor: colors.border }]} 
           onPress={handleLogout}
         >
           <Ionicons
@@ -177,14 +191,14 @@ export default function SettingsScreen() {
           </Text>
         </TouchableOpacity>
 
-        <Text style={s.versionText}>B2B Marketplace v1.0.4 (Build 42)</Text>
+        <Text style={[s.versionText, { color: colors.muted }]}>B2B Marketplace v1.0.4 (Build 42)</Text>
       </ScrollView>
 
       {/* Модалка выбора темы */}
       <Modal visible={themeModalVisible} transparent animationType="fade">
         <View style={s.modalBg}>
-          <View style={s.modalContent}>
-            <Text style={s.modalTitle}>Выбор темы</Text>
+          <View style={[s.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[s.modalTitle, { color: colors.text }]}>Выбор темы</Text>
             {[
               { key: "system", label: "Как в системе (Авто)" },
               { key: "light", label: "Светлая" },
@@ -192,20 +206,23 @@ export default function SettingsScreen() {
             ].map((item) => (
               <TouchableOpacity
                 key={item.key}
-                style={s.modalOption}
+                style={[s.modalOption, { borderBottomColor: colors.border }]}
                 onPress={() => {
-                  setTheme(item.key as any);
+                  setMode(item.key as any);
                   setThemeModalVisible(false);
                 }}
               >
-                <Text style={[s.modalOptionText, theme === item.key && s.modalOptionActive]}>
+                <Text style={[s.modalOptionText, { color: colors.text }, mode === item.key && s.modalOptionActive]}>
                   {item.label}
                 </Text>
-                {theme === item.key && <Ionicons name="checkmark" size={18} color="#2AABEE" />}
+                {mode === item.key && <Ionicons name="checkmark" size={18} color="#2AABEE" />}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity style={s.modalClose} onPress={() => setThemeModalVisible(false)}>
-              <Text style={s.modalCloseText}>Закрыть</Text>
+            <TouchableOpacity 
+              style={[s.modalClose, { backgroundColor: mode === "dark" ? "#21262d" : "#F1F5F9" }]} 
+              onPress={() => setThemeModalVisible(false)}
+            >
+              <Text style={[s.modalCloseText, { color: colors.text }]}>Закрыть</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -214,28 +231,31 @@ export default function SettingsScreen() {
       {/* Модалка выбора языка */}
       <Modal visible={langModalVisible} transparent animationType="fade">
         <View style={s.modalBg}>
-          <View style={s.modalContent}>
-            <Text style={s.modalTitle}>Язык / Language</Text>
+          <View style={[s.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[s.modalTitle, { color: colors.text }]}>Язык / Language</Text>
             {[
               { key: "ru", label: "Русский" },
               { key: "en", label: "English" },
             ].map((item) => (
               <TouchableOpacity
                 key={item.key}
-                style={s.modalOption}
+                style={[s.modalOption, { borderBottomColor: colors.border }]}
                 onPress={() => {
                   setLanguage(item.key as any);
                   setLangModalVisible(false);
                 }}
               >
-                <Text style={[s.modalOptionText, language === item.key && s.modalOptionActive]}>
+                <Text style={[s.modalOptionText, { color: colors.text }, language === item.key && s.modalOptionActive]}>
                   {item.label}
                 </Text>
                 {language === item.key && <Ionicons name="checkmark" size={18} color="#2AABEE" />}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity style={s.modalClose} onPress={() => setLangModalVisible(false)}>
-              <Text style={s.modalCloseText}>Закрыть</Text>
+            <TouchableOpacity 
+              style={[s.modalClose, { backgroundColor: mode === "dark" ? "#21262d" : "#F1F5F9" }]} 
+              onPress={() => setLangModalVisible(false)}
+            >
+              <Text style={[s.modalCloseText, { color: colors.text }]}>Закрыть</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -245,49 +265,44 @@ export default function SettingsScreen() {
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#F4F4F5" },
+  wrap: { flex: 1 },
   content: { paddingBottom: 40 },
   group: {
     marginTop: 24,
     marginLeft: 16,
     marginBottom: 8,
     fontSize: 13,
-    color: "#707579",
     fontWeight: "700",
     textTransform: "uppercase",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E4E4E7",
   },
   avatarBox: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
-  title: { fontSize: 16, fontWeight: "500", color: "#0F172A" },
-  sub: { fontSize: 13, color: "#707579", marginTop: 2 },
+  title: { fontSize: 16, fontWeight: "500" },
+  sub: { fontSize: 13, marginTop: 2 },
   versionText: {
     textAlign: "center",
-    color: "#A1A1AA",
     fontSize: 13,
     marginTop: 32,
     fontWeight: "500",
   },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  modalContent: { width: "80%", backgroundColor: "#fff", borderRadius: 20, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A", marginBottom: 16, textAlign: "center" },
-  modalOption: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#E4E4E7" },
-  modalOptionText: { fontSize: 16, color: "#334155" },
+  modalContent: { width: "80%", borderRadius: 20, padding: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16, textAlign: "center" },
+  modalOption: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  modalOptionText: { fontSize: 16 },
   modalOptionActive: { color: "#2AABEE", fontWeight: "700" },
-  modalClose: { marginTop: 16, backgroundColor: "#F1F5F9", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
-  modalCloseText: { color: "#0F172A", fontWeight: "600", fontSize: 15 },
+  modalClose: { marginTop: 16, paddingVertical: 12, borderRadius: 12, alignItems: "center" },
+  modalCloseText: { fontWeight: "600", fontSize: 15 },
 });

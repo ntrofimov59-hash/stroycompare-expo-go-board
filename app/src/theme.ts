@@ -1,16 +1,25 @@
-export const colors = {
-  bg: "#F2F2F7",
-  card: "#FFFFFF",
-  text: "#0F172A",
-  muted: "#8E8E93",
-  line: "#E5E5EA",
-  accent: "#2AABEE",
-  dark: "#0F172A",
-  danger: "#FF3B30",
-  success: "#16A34A",
-  warnBg: "#FFFBEB",
-  warnText: "#92400E",
+export const githubDark = {
+  bg: "#0D1117",
+  bgElevated: "#161B22",
+  card: "#161B22",
+  border: "#30363D",
+  text: "#E6EDF3",
+  muted: "#8B949E",
+  accent: "#58A6FF",
+  success: "#3FB950",
+  danger: "#F85149",
+  tabBar: "rgba(13,17,23,0.88)",
 };
 
-export const radius = { sm: 10, md: 14, lg: 20 };
-export const space = { xs: 8, sm: 12, md: 16, lg: 24 };
+export const githubLight = {
+  bg: "#FFFFFF",
+  bgElevated: "#F6F8FA",
+  card: "#FFFFFF",
+  border: "#D0D7DE",
+  text: "#1F2328",
+  muted: "#656D76",
+  accent: "#0969DA",
+  success: "#1A7F37",
+  danger: "#CF222E",
+  tabBar: "rgba(255,255,255,0.86)",
+};

@@ -3,14 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput,
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
 import { useAuthStore } from "../../src/store/auth";
 import { useSettingsStore } from "../../src/store/settings";
+import { useThemeStore } from "../../src/store/theme";
 import { api } from "../../src/api/client";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, accessToken, setAuth, logout } = useAuthStore();
   const { regionName, setRegion } = useSettingsStore();
+  const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
 
   const [modal, setModal] = useState(false);
   const [company, setCompany] = useState("");
@@ -106,22 +110,23 @@ export default function ProfileScreen() {
       : "Покупатель";
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: insets.top }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-        <View style={styles.hero}>
+    <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>
+      <StatusBar style={mode === "dark" ? "light" : "dark"} />
+      <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={{ padding: 16 }}>
+        <View style={[styles.hero, { backgroundColor: colors.card }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {(user?.first_name || "?").charAt(0).toUpperCase()}
             </Text>
           </View>
-          <Text style={styles.name}>{user?.first_name || "Пользователь"}</Text>
-          <Text style={styles.email}>{user?.email || "email не указан"}</Text>
-          <View style={styles.rolePill}>
-            <Text style={styles.roleText}>{roleLabel}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{user?.first_name || "Пользователь"}</Text>
+          <Text style={[styles.email, { color: colors.muted }]}>{user?.email || "email не указан"}</Text>
+          <View style={[styles.rolePill, { backgroundColor: mode === "dark" ? "#21262d" : "#F1F5F9" }]}>
+            <Text style={[styles.roleText, { color: colors.muted }]}>{roleLabel}</Text>
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
           {user?.role === "buyer" && (
             <MenuRow
               icon="storefront-outline"
@@ -140,7 +145,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
           <MenuRow
             icon="diamond-outline"
             title="Подписка Premium"
@@ -162,36 +167,37 @@ export default function ProfileScreen() {
           <MenuRow icon="help-circle-outline" title="Поддержка" onPress={() => {}} />
         </View>
 
-        <TouchableOpacity style={styles.logout} onPress={onLogout}>
+        <TouchableOpacity style={[styles.logout, { backgroundColor: colors.card }]} onPress={onLogout}>
           <Text style={styles.logoutText}>Выйти</Text>
         </TouchableOpacity>
 
         <Modal visible={modal} transparent animationType="slide">
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-            <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 }}>
-              <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8, color: "#0F172A" }}>Стать поставщиком</Text>
-              <Text style={{ color: "#707579", marginBottom: 16, fontSize: 14 }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8, color: colors.text }}>Стать поставщиком</Text>
+              <Text style={{ color: colors.muted, marginBottom: 16, fontSize: 14 }}>
                 Ваши цены появятся в сравнении. Нужен активный Premium.
               </Text>
               <TextInput
                 placeholder="Название компании"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={colors.muted}
                 value={company}
                 onChangeText={setCompany}
                 style={{
                   borderWidth: 1,
-                  borderColor: "#E4E4E7",
+                  borderColor: colors.border,
                   borderRadius: 12,
                   padding: 12,
                   marginBottom: 12,
                   fontSize: 16,
-                  color: "#0F172A",
+                  color: colors.text,
+                  backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA",
                 }}
               />
               <TouchableOpacity
                 onPress={becomeSupplier}
                 disabled={loading}
-                style={{ backgroundColor: "#0F172A", borderRadius: 12, padding: 14, alignItems: "center" }}
+                style={{ backgroundColor: mode === "dark" ? "#30363d" : "#0F172A", borderRadius: 12, padding: 14, alignItems: "center" }}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" />
@@ -200,7 +206,7 @@ export default function ProfileScreen() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setModal(false)}>
-                <Text style={{ textAlign: "center", marginTop: 16, color: "#707579", fontWeight: "600" }}>
+                <Text style={{ textAlign: "center", marginTop: 16, color: colors.muted, fontWeight: "600" }}>
                   Отмена
                 </Text>
               </TouchableOpacity>
@@ -223,22 +229,22 @@ function MenuRow({
   subtitle?: string;
   onPress: () => void;
 }) {
+  const colors = useThemeStore((s) => s.colors);
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
-      <Ionicons name={icon} size={22} color="#0F172A" />
+    <TouchableOpacity style={[styles.row, { borderBottomColor: colors.border }]} onPress={onPress} activeOpacity={0.6}>
+      <Ionicons name={icon} size={22} color={colors.text} />
       <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
+        <Text style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
+        {subtitle ? <Text style={[styles.rowSub, { color: colors.muted }]}>{subtitle}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F4F5" },
+  container: { flex: 1 },
   hero: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
@@ -254,18 +260,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarText: { color: "#fff", fontSize: 28, fontWeight: "700" },
-  name: { fontSize: 20, fontWeight: "700", color: "#0F172A" },
-  email: { marginTop: 4, fontSize: 14, color: "#707579" },
+  name: { fontSize: 20, fontWeight: "700" },
+  email: { marginTop: 4, fontSize: 14 },
   rolePill: {
     marginTop: 10,
-    backgroundColor: "#F1F5F9",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20,
   },
-  roleText: { fontSize: 13, fontWeight: "600", color: "#475569" },
+  roleText: { fontSize: 13, fontWeight: "600" },
   section: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 12,
@@ -276,12 +280,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E4E4E7",
   },
-  rowTitle: { fontSize: 16, color: "#0F172A", fontWeight: "500" },
-  rowSub: { marginTop: 2, fontSize: 13, color: "#8E8E93" },
+  rowTitle: { fontSize: 16, fontWeight: "500" },
+  rowSub: { marginTop: 2, fontSize: 13 },
   logout: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     alignItems: "center",

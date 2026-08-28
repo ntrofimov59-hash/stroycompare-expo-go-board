@@ -16,6 +16,7 @@ import { useFocusEffect, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api/client";
 import { useSettingsStore } from "../../src/store/settings";
+import { useThemeStore } from "../../src/store/theme";
 
 type Offer = {
   id: string;
@@ -36,6 +37,7 @@ type CatalogProduct = {
 export default function SupplierOffersScreen() {
   const currentRegionId = useSettingsStore((s: any) => s.regionId);
   const currentRegionName = useSettingsStore((s: any) => s.regionName);
+  const { mode, colors } = useThemeStore();
 
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +151,7 @@ export default function SupplierOffersScreen() {
         }}
       />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
         {loading && !refreshing ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#2AABEE" />
@@ -171,8 +173,8 @@ export default function SupplierOffersScreen() {
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="pricetags-outline" size={48} color="#A0A0A0" />
-                <Text style={styles.emptyText}>
+                <Ionicons name="pricetags-outline" size={48} color={colors.muted} />
+                <Text style={[styles.emptyText, { color: colors.muted }]}>
                   У вас пока нет активных предложений. Добавьте цены, чтобы они появились в общем сравнении.
                 </Text>
                 <TouchableOpacity style={styles.emptyBtn} onPress={handleOpenModal}>
@@ -181,21 +183,21 @@ export default function SupplierOffersScreen() {
               </View>
             }
             renderItem={({ item }) => (
-              <View style={styles.card}>
+              <View style={[styles.card, { backgroundColor: colors.card }]}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.name} numberOfLines={2}>
+                  <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
                     {item.product?.name || "Товар"}
                   </Text>
                   <View
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: item.is_active ? "#DCFCE7" : "#F1F5F9" },
+                      { backgroundColor: item.is_active ? (mode === "dark" ? "#064e3b" : "#DCFCE7") : (mode === "dark" ? "#1e293b" : "#F1F5F9") },
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusText,
-                        { color: item.is_active ? "#15803D" : "#64748B" },
+                        { color: item.is_active ? "#15803D" : colors.muted },
                       ]}
                     >
                       {item.is_active ? "Активно" : "Скрыто"}
@@ -203,20 +205,20 @@ export default function SupplierOffersScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.meta}>
+                <Text style={[styles.meta, { color: colors.muted }]}>
                   📍 {item.region?.name || currentRegionName || "Москва"} · Мин. заказ: {item.min_order_qty} {item.product?.unit || "шт"}
                   {item.delivery_days ? ` · ${item.delivery_days} дн.` : ""}
                 </Text>
 
-                <View style={styles.cardFooter}>
-                  <Text style={styles.price}>
+                <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.price, { color: colors.text }]}>
                     {item.price.toLocaleString("ru-RU")} ₽
-                    <Text style={styles.unit}> / {item.product?.unit || "шт"}</Text>
+                    <Text style={[styles.unit, { color: colors.muted }]}> / {item.product?.unit || "шт"}</Text>
                   </Text>
 
                   {item.is_active && (
                     <TouchableOpacity
-                      style={styles.hideBtn}
+                      style={[styles.hideBtn, { backgroundColor: mode === "dark" ? "#450a0a" : "#FEF2F2" }]}
                       onPress={() => deactivate(item.id)}
                     >
                       <Ionicons name="trash-outline" size={16} color="#EF4444" />
@@ -238,13 +240,13 @@ export default function SupplierOffersScreen() {
         {/* Модальное окно создания офера */}
         <Modal visible={modal} animationType="slide" transparent>
           <View style={styles.modalBg}>
-            <View style={styles.modal}>
-              <View style={styles.modalIndicator} />
-              <Text style={styles.modalTitle}>Добавить предложение</Text>
+            <View style={[styles.modal, { backgroundColor: colors.card }]}>
+              <View style={[styles.modalIndicator, { backgroundColor: colors.border }]} />
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Добавить предложение</Text>
 
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.label}>Выберите товар из каталога *</Text>
-                <View style={styles.catalogBox}>
+                <Text style={[styles.label, { color: colors.muted }]}>Выберите товар из каталога *</Text>
+                <View style={[styles.catalogBox, { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}>
                   {catalogProducts.length === 0 ? (
                     <ActivityIndicator size="small" color="#2AABEE" style={{ padding: 10 }} />
                   ) : (
@@ -260,6 +262,7 @@ export default function SupplierOffersScreen() {
                         <Text
                           style={[
                             styles.catalogItemText,
+                            { color: colors.text },
                             selectedProduct?.id === p.id && styles.catalogItemTextActive,
                           ]}
                         >
@@ -270,33 +273,35 @@ export default function SupplierOffersScreen() {
                   )}
                 </View>
 
-                <Text style={styles.label}>Цена за 1 {selectedProduct?.unit || "ед."} (₽) *</Text>
+                <Text style={[styles.label, { color: colors.muted }]}>Цена за 1 {selectedProduct?.unit || "ед."} (₽) *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7", color: colors.text }]}
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
                   placeholder="Например: 1500"
-                  placeholderTextColor="#8E8E93"
+                  placeholderTextColor={colors.muted}
                 />
 
                 <View style={styles.rowInputs}>
                   <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text style={styles.label}>Мин. объем</Text>
+                    <Text style={[styles.label, { color: colors.muted }]}>Мин. объем</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7", color: colors.text }]}
                       value={minQty}
                       onChangeText={setMinQty}
                       keyboardType="numeric"
+                      placeholderTextColor={colors.muted}
                     />
                   </View>
                   <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.label}>Срок (дней)</Text>
+                    <Text style={[styles.label, { color: colors.muted }]}>Срок (дней)</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7", color: colors.text }]}
                       value={deliveryDays}
                       onChangeText={setDeliveryDays}
                       keyboardType="numeric"
+                      placeholderTextColor={colors.muted}
                     />
                   </View>
                 </View>
@@ -314,7 +319,7 @@ export default function SupplierOffersScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => setModal(false)} style={{ paddingVertical: 12 }}>
-                  <Text style={styles.cancel}>Отмена</Text>
+                  <Text style={[styles.cancel, { color: colors.muted }]}>Отмена</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -326,14 +331,13 @@ export default function SupplierOffersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F4F5" },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   headerBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: 4 },
   headerBtnText: { color: "#2AABEE", fontWeight: "600", fontSize: 15 },
   list: { padding: 16, paddingBottom: 100 },
   
   card: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -344,18 +348,18 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
-  name: { fontSize: 16, fontWeight: "600", color: "#0F172A", flex: 1 },
+  name: { fontSize: 16, fontWeight: "600", flex: 1 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 11, fontWeight: "700" },
-  meta: { marginTop: 6, fontSize: 13, color: "#707579" },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#E4E4E7" },
-  price: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  unit: { fontSize: 13, fontWeight: "400", color: "#707579" },
-  hideBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FEF2F2", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  meta: { marginTop: 6, fontSize: 13 },
+  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  price: { fontSize: 18, fontWeight: "700" },
+  unit: { fontSize: 13, fontWeight: "400" },
+  hideBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   hideText: { color: "#EF4444", fontWeight: "600", fontSize: 13 },
 
   emptyContainer: { alignItems: "center", marginTop: 60, paddingHorizontal: 24 },
-  emptyText: { textAlign: "center", color: "#707579", marginTop: 12, fontSize: 14, lineHeight: 20 },
+  emptyText: { textAlign: "center", marginTop: 12, fontSize: 14, lineHeight: 20 },
   emptyBtn: { marginTop: 16, backgroundColor: "#2AABEE", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
   emptyBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 
@@ -384,7 +388,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modal: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -393,25 +396,22 @@ const styles = StyleSheet.create({
   modalIndicator: {
     width: 36,
     height: 4,
-    backgroundColor: "#E4E4E7",
     borderRadius: 2,
     alignSelf: "center",
     marginBottom: 14,
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16, color: "#0F172A" },
-  label: { fontSize: 13, fontWeight: "600", color: "#475569", marginBottom: 6, marginTop: 10 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: "600", marginBottom: 6, marginTop: 10 },
   input: {
-    backgroundColor: "#F2F2F7",
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    color: "#0F172A",
   },
   rowInputs: { flexDirection: "row" },
-  catalogBox: { maxHeight: 160, borderWidth: 1, borderColor: "#E4E4E7", borderRadius: 12, padding: 6, backgroundColor: "#FAFAFA" },
+  catalogBox: { maxHeight: 160, borderWidth: 1, borderRadius: 12, padding: 6 },
   catalogItem: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8 },
   catalogItemActive: { backgroundColor: "#2AABEE" },
-  catalogItemText: { fontSize: 14, color: "#0F172A" },
+  catalogItemText: { fontSize: 14 },
   catalogItemTextActive: { color: "#FFFFFF", fontWeight: "600" },
 
   saveBtn: {
@@ -423,5 +423,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   saveText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  cancel: { textAlign: "center", color: "#707579", fontWeight: "600", fontSize: 15 },
+  cancel: { textAlign: "center", fontWeight: "600", fontSize: 15 },
 });

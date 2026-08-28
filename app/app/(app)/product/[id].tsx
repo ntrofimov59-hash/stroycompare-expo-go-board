@@ -14,6 +14,7 @@ import { useLocalSearchParams, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../../src/api/client";
 import { useSettingsStore } from "../../../src/store/settings";
+import { useThemeStore } from "../../../src/store/theme";
 
 type Offer = {
   id: string;
@@ -49,6 +50,9 @@ type Product = {
 export default function ProductCompareScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const regionId = useSettingsStore((s: any) => s.regionId);
+
+  const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -114,7 +118,11 @@ export default function ProductCompareScreen() {
 
     return (
       <View>
-        <View style={[styles.card, isBest && styles.cardBest]}>
+        <View style={[
+          styles.card, 
+          { backgroundColor: colors.card, borderColor: colors.border },
+          isBest && [styles.cardBest, { backgroundColor: mode === "dark" ? "#161b22" : "#F8FAFC" }]
+        ]}>
           {isBest && (
             <View style={styles.bestBadge}>
               <Ionicons name="flash" size={12} color="#FFFFFF" />
@@ -125,7 +133,7 @@ export default function ProductCompareScreen() {
           <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
               <View style={styles.supplierRow}>
-                <Text style={styles.supplierName} numberOfLines={1}>{item.supplier.company_name}</Text>
+                <Text style={[styles.supplierName, { color: colors.text }]} numberOfLines={1}>{item.supplier.company_name}</Text>
                 {item.supplier.is_verified && (
                   <View style={styles.verifiedBadge}>
                     <Ionicons name="checkmark" size={10} color="#FFFFFF" />
@@ -134,27 +142,27 @@ export default function ProductCompareScreen() {
               </View>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={13} color="#F59E0B" />
-                <Text style={styles.ratingText}>
+                <Text style={[styles.ratingText, { color: colors.muted }]}>
                   {item.supplier.rating.toFixed(1)}
                   {item.supplier.reviews_count > 0 ? ` · ${item.supplier.reviews_count} отзывов` : " · Новый"}
                 </Text>
               </View>
             </View>
-            <View style={styles.regionBadge}>
-              <Ionicons name="location-outline" size={12} color="#71717A" />
-              <Text style={styles.regionText}>{item.region?.name || "Регион"}</Text>
+            <View style={[styles.regionBadge, { backgroundColor: mode === "dark" ? "#21262d" : "#F1F5F9" }]}>
+              <Ionicons name="location-outline" size={12} color={colors.muted} />
+              <Text style={[styles.regionText, { color: colors.muted }]}>{item.region?.name || "Регион"}</Text>
             </View>
           </View>
 
-          <View style={styles.priceSection}>
+          <View style={[styles.priceSection, { borderTopColor: colors.border }]}>
             <View>
               {hasDiscount && (
-                <Text style={styles.oldPrice}>{formatPrice(item.price)}</Text>
+                <Text style={[styles.oldPrice, { color: colors.muted }]}>{formatPrice(item.price)}</Text>
               )}
-              <Text style={styles.finalPrice}>{formatPrice(hasDiscount ? item.final_price : item.price)}</Text>
+              <Text style={[styles.finalPrice, { color: colors.text }]}>{formatPrice(hasDiscount ? item.final_price : item.price)}</Text>
             </View>
             {hasDiscount && (
-              <View style={styles.discountBadge}>
+              <View style={[styles.discountBadge, { backgroundColor: mode === "dark" ? "#052e16" : "#DCFCE7" }]}>
                 <Text style={styles.discountText}>−{item.discount_percent}%</Text>
               </View>
             )}
@@ -162,25 +170,25 @@ export default function ProductCompareScreen() {
 
           <View style={styles.specsRow}>
             <View style={styles.specItem}>
-              <Ionicons name="cube-outline" size={14} color="#71717A" />
-              <Text style={styles.specText}>от {item.min_order_qty} {product?.unit || "шт"}</Text>
+              <Ionicons name="cube-outline" size={14} color={colors.muted} />
+              <Text style={[styles.specText, { color: colors.muted }]}>от {item.min_order_qty} {product?.unit || "шт"}</Text>
             </View>
             {item.delivery_days != null && (
               <View style={styles.specItem}>
-                <Ionicons name="time-outline" size={14} color="#71717A" />
-                <Text style={styles.specText}>{item.delivery_days} дн.</Text>
+                <Ionicons name="time-outline" size={14} color={colors.muted} />
+                <Text style={[styles.specText, { color: colors.muted }]}>{item.delivery_days} дн.</Text>
               </View>
             )}
             {item.stock_qty != null && (
               <View style={styles.specItem}>
-                <Ionicons name="layers-outline" size={14} color="#71717A" />
-                <Text style={styles.specText}>в наличии: {item.stock_qty}</Text>
+                <Ionicons name="layers-outline" size={14} color={colors.muted} />
+                <Text style={[styles.specText, { color: colors.muted }]}>в наличии: {item.stock_qty}</Text>
               </View>
             )}
           </View>
 
           <TouchableOpacity 
-            style={styles.actionBtn} 
+            style={[styles.actionBtn, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]} 
             activeOpacity={0.8}
             onPress={() => handleContact(item)}
           >
@@ -190,7 +198,7 @@ export default function ProductCompareScreen() {
         </View>
 
         {hasSub && isBest && saved > 0 && (
-          <View style={styles.savingsBanner}>
+          <View style={[styles.savingsBanner, { backgroundColor: mode === "dark" ? "#052e16" : "#F0FDF4", borderColor: mode === "dark" ? "#14532d" : "#DCFCE7" }]}>
             <Ionicons name="trending-down" size={14} color="#16A34A" />
             <Text style={styles.savingsText}>
               Экономия по сравнению со средней ценой: ~{saved.toFixed(0)} ₽
@@ -203,7 +211,7 @@ export default function ProductCompareScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color="#0284C7" size="large" />
       </View>
     );
@@ -215,33 +223,33 @@ export default function ProductCompareScreen() {
         options={{
           title: product?.name || "Сравнение цен",
           headerBackTitle: "Назад",
-          headerTintColor: "#0F172A",
-          headerStyle: { backgroundColor: "#FFFFFF" },
+          headerTintColor: colors.text,
+          headerStyle: { backgroundColor: colors.card },
         }}
       />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
         {/* Шапка товара */}
-        <View style={styles.productHeader}>
-          <Text style={styles.productName}>{product?.name}</Text>
-          <Text style={styles.productMeta}>
+        <View style={[styles.productHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Text style={[styles.productName, { color: colors.text }]}>{product?.name}</Text>
+          <Text style={[styles.productMeta, { color: colors.muted }]}>
             {product?.category?.name || "Категория"}
             {product?.unit ? ` · Ед. изм: ${product.unit}` : ""}
           </Text>
           {product?.description ? (
-            <Text style={styles.productDesc} numberOfLines={2}>
+            <Text style={[styles.productDesc, { color: colors.text }]} numberOfLines={2}>
               {product.description}
             </Text>
           ) : null}
 
           {hasSub ? (
-            <View style={styles.subBanner}>
+            <View style={[styles.subBanner, { backgroundColor: mode === "dark" ? "#052e16" : "#F0FDF4", borderColor: mode === "dark" ? "#14532d" : "#DCFCE7" }]}>
               <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
               <Text style={styles.subBannerText}>Премиум-доступ активен: оптовые цены применены</Text>
             </View>
           ) : (
             <TouchableOpacity
-              style={styles.promoBox}
+              style={[styles.promoBox, { backgroundColor: mode === "dark" ? "#221a08" : "#FFFBEB", borderColor: mode === "dark" ? "#422e06" : "#FEF3C7" }]}
               activeOpacity={0.8}
               onPress={() => router.push("/(app)/subscription")}
             >
@@ -256,20 +264,28 @@ export default function ProductCompareScreen() {
 
         {/* Панель сортировки */}
         <View style={styles.sortRow}>
-          <Text style={styles.sortLabel}>Сортировать:</Text>
+          <Text style={[styles.sortLabel, { color: colors.muted }]}>Сортировать:</Text>
           <TouchableOpacity
-            style={[styles.sortChip, sort === "price_asc" && styles.sortChipActive]}
+            style={[
+              styles.sortChip, 
+              { backgroundColor: colors.card, borderColor: colors.border },
+              sort === "price_asc" && [styles.sortChipActive, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A", borderColor: mode === "dark" ? "#30363d" : "#0F172A" }]
+            ]}
             onPress={() => setSort("price_asc")}
           >
-            <Text style={[styles.sortChipText, sort === "price_asc" && styles.sortChipTextActive]}>
+            <Text style={[styles.sortChipText, { color: colors.text }, sort === "price_asc" && styles.sortChipTextActive]}>
               Сначала дешевле
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.sortChip, sort === "price_desc" && styles.sortChipActive]}
+            style={[
+              styles.sortChip, 
+              { backgroundColor: colors.card, borderColor: colors.border },
+              sort === "price_desc" && [styles.sortChipActive, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A", borderColor: mode === "dark" ? "#30363d" : "#0F172A" }]
+            ]}
             onPress={() => setSort("price_desc")}
           >
-            <Text style={[styles.sortChipText, sort === "price_desc" && styles.sortChipTextActive]}>
+            <Text style={[styles.sortChipText, { color: colors.text }, sort === "price_desc" && styles.sortChipTextActive]}>
               Сначала дороже
             </Text>
           </TouchableOpacity>
@@ -293,9 +309,9 @@ export default function ProductCompareScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={48} color="#A1A1AA" />
-              <Text style={styles.emptyTitle}>Предложений пока нет</Text>
-              <Text style={styles.emptyDesc}>В выбранном регионе никто из поставщиков еще не выставил этот товар</Text>
+              <Ionicons name="search-outline" size={48} color={colors.muted} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>Предложений пока нет</Text>
+              <Text style={[styles.emptyDesc, { color: colors.muted }]}>В выбранном регионе никто из поставщиков еще не выставил этот товар</Text>
             </View>
           }
         />
@@ -305,22 +321,19 @@ export default function ProductCompareScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   productHeader: {
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
   },
-  productName: { fontSize: 20, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 },
-  productMeta: { marginTop: 4, fontSize: 13, color: "#64748B", fontWeight: "500" },
-  productDesc: { marginTop: 8, fontSize: 14, color: "#334155", lineHeight: 20 },
+  productName: { fontSize: 20, fontWeight: "700", letterSpacing: -0.3 },
+  productMeta: { marginTop: 4, fontSize: 13, fontWeight: "500" },
+  productDesc: { marginTop: 8, fontSize: 14, lineHeight: 20 },
   subBanner: {
     marginTop: 14,
-    backgroundColor: "#F0FDF4",
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -328,31 +341,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#DCFCE7",
   },
   subBannerText: { color: "#166534", fontSize: 13, fontWeight: "600" },
   promoBox: {
     marginTop: 14,
-    backgroundColor: "#FFFBEB",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#FEF3C7",
     flexDirection: "row",
     alignItems: "center",
   },
-  promoTitle: { color: "#92400E", fontWeight: "700", fontSize: 13 },
+  promoTitle: { color: "#D97706", fontWeight: "700", fontSize: 13 },
   promoSub: { color: "#B45309", fontSize: 12, marginTop: 2, fontWeight: "500" },
   savingsBanner: {
     marginTop: -4,
     marginBottom: 12,
     marginHorizontal: 4,
-    backgroundColor: "#F0FDF4",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#DCFCE7",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -365,27 +373,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
-  sortLabel: { fontSize: 13, color: "#64748B", fontWeight: "500" },
+  sortLabel: { fontSize: 13, fontWeight: "500" },
   sortChip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  sortChipActive: { backgroundColor: "#0F172A", borderColor: "#0F172A" },
-  sortChipText: { fontSize: 13, color: "#475569", fontWeight: "500" },
+  sortChipActive: {},
+  sortChipText: { fontSize: 13, fontWeight: "500" },
   sortChipTextActive: { color: "#FFFFFF", fontWeight: "600" },
   list: { padding: 16, paddingBottom: 32 },
   card: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#64748B",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -394,7 +398,6 @@ const styles = StyleSheet.create({
   cardBest: {
     borderColor: "#0284C7",
     borderWidth: 1.5,
-    backgroundColor: "#F8FAFC",
   },
   bestBadge: {
     alignSelf: "flex-start",
@@ -410,7 +413,7 @@ const styles = StyleSheet.create({
   bestBadgeText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   supplierRow: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "80%" },
-  supplierName: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+  supplierName: { fontSize: 16, fontWeight: "700" },
   verifiedBadge: {
     backgroundColor: "#0284C7",
     borderRadius: 8,
@@ -420,17 +423,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 },
-  ratingText: { fontSize: 13, color: "#64748B", fontWeight: "500" },
+  ratingText: { fontSize: 13, fontWeight: "500" },
   regionBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F5F9",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     gap: 4,
   },
-  regionText: { fontSize: 11, color: "#64748B", fontWeight: "500" },
+  regionText: { fontSize: 11, fontWeight: "500" },
   priceSection: {
     flexDirection: "row",
     alignItems: "baseline",
@@ -438,17 +440,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
   },
   oldPrice: {
     fontSize: 13,
-    color: "#94A3B8",
     textDecorationLine: "line-through",
     fontWeight: "500",
   },
-  finalPrice: { fontSize: 22, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
+  finalPrice: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
   discountBadge: {
-    backgroundColor: "#DCFCE7",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -456,10 +455,9 @@ const styles = StyleSheet.create({
   discountText: { color: "#16A34A", fontSize: 12, fontWeight: "700" },
   specsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12, gap: 12 },
   specItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  specText: { fontSize: 12, color: "#64748B", fontWeight: "500" },
+  specText: { fontSize: 12, fontWeight: "500" },
   actionBtn: {
     marginTop: 16,
-    backgroundColor: "#0F172A",
     borderRadius: 12,
     paddingVertical: 12,
     flexDirection: "row",
@@ -469,6 +467,6 @@ const styles = StyleSheet.create({
   },
   actionText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
   emptyContainer: { alignItems: "center", justifyContent: "center", paddingTop: 60, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A", marginTop: 12 },
-  emptyDesc: { fontSize: 14, color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: "700", marginTop: 12 },
+  emptyDesc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
 });

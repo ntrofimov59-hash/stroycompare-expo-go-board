@@ -13,6 +13,7 @@ import { useLocalSearchParams, Stack, router } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../../src/api/client";
+import { useThemeStore } from "../../../src/store/theme";
 
 type Listing = {
   id: string;
@@ -36,6 +37,9 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [item, setItem] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -74,7 +78,7 @@ export default function ListingDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color="#0284C7" size="large" />
       </View>
     );
@@ -82,9 +86,9 @@ export default function ListingDetailScreen() {
 
   if (!item) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="document-text-outline" size={48} color="#A1A1AA" />
-        <Text style={styles.muted}>Объявление не найдено или удалено</Text>
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
+        <Ionicons name="document-text-outline" size={48} color={colors.muted} />
+        <Text style={[styles.muted, { color: colors.muted }]}>Объявление не найдено или удалено</Text>
         <TouchableOpacity style={styles.backBtnEmpty} onPress={() => router.back()}>
           <Text style={styles.link}>Вернуться назад</Text>
         </TouchableOpacity>
@@ -115,67 +119,77 @@ export default function ListingDetailScreen() {
         options={{ 
           title: "Объявление", 
           headerBackTitle: "Назад",
-          headerTintColor: "#0F172A",
-          headerStyle: { backgroundColor: "#FFFFFF" }
+          headerTintColor: colors.text,
+          headerStyle: { backgroundColor: colors.card }
         }} 
       />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
         <ScrollView 
           contentContainerStyle={styles.scrollContent} 
           showsVerticalScrollIndicator={false}
         >
           {/* Верхняя плашка: Тип и Дата */}
           <View style={styles.topMetaRow}>
-            <View style={[styles.badge, item.type === "service" ? styles.badgeService : styles.badgeMaterial]}>
+            <View style={[
+              styles.badge, 
+              item.type === "service" 
+                ? { backgroundColor: mode === "dark" ? "#032b43" : "#E0F2FE" } 
+                : { backgroundColor: mode === "dark" ? "#052e16" : "#DCFCE7" }
+            ]}>
               <Ionicons 
                 name={item.type === "service" ? "construct-outline" : "cube-outline"} 
                 size={13} 
-                color={item.type === "service" ? "#0369A1" : "#166534"} 
+                color={item.type === "service" ? "#38bdf8" : "#4ade80"} 
               />
-              <Text style={[styles.badgeText, item.type === "service" ? styles.badgeTextService : styles.badgeTextMaterial]}>
+              <Text style={[
+                styles.badgeText, 
+                item.type === "service" 
+                  ? { color: "#38bdf8" } 
+                  : { color: "#4ade80" }
+              ]}>
                 {item.type === "service" ? "Услуга" : "Материал / Товар"}
               </Text>
             </View>
             {item.created_at && (
-              <Text style={styles.dateText}>Опубликовано {formatDate(item.created_at)}</Text>
+              <Text style={[styles.dateText, { color: colors.muted }]}>Опубликовано {formatDate(item.created_at)}</Text>
             )}
           </View>
 
           {/* Заголовок и Цена */}
-          <View style={styles.mainCard}>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.price}>{priceText}</Text>
+          <View style={[styles.mainCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.price, { color: colors.text }]}>{priceText}</Text>
 
             {item.region?.name ? (
               <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={16} color="#64748B" />
-                <Text style={styles.locationText}>{item.region.name}</Text>
+                <Ionicons name="location-outline" size={16} color={colors.muted} />
+                <Text style={[styles.locationText, { color: colors.muted }]}>{item.region.name}</Text>
               </View>
             ) : null}
           </View>
 
           {/* Блок описания */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Описание</Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Описание</Text>
             {item.description ? (
-              <Text style={styles.desc}>{item.description}</Text>
+              <Text style={[styles.desc, { color: colors.text }]}>{item.description}</Text>
             ) : (
-              <Text style={styles.mutedDesc}>Автор не добавил подробного описания к этому объявлению.</Text>
+              <Text style={[styles.mutedDesc, { color: colors.muted }]}>Автор не добавил подробного описания к этому объявлению.</Text>
             )}
           </View>
 
           {/* Блок продавца */}
           {item.supplier && (
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Продавец</Text>
+            <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Продавец</Text>
               <View style={styles.supplierRow}>
-                <View style={styles.supplierAvatar}>
+                <View style={[styles.supplierAvatar, { backgroundColor: mode === "dark" ? "#161b22" : "#F0F9FF", borderColor: colors.border }]}>
                   <Ionicons name="business-outline" size={20} color="#0284C7" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={styles.supplierName}>{item.supplier.company_name}</Text>
+                    <Text style={[styles.supplierName, { color: colors.text }]}>{item.supplier.company_name}</Text>
                     {item.supplier.is_verified && (
                       <View style={styles.verifiedBadge}>
                         <Ionicons name="checkmark" size={10} color="#FFFFFF" />
@@ -184,7 +198,7 @@ export default function ListingDetailScreen() {
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
                     <Ionicons name="star" size={13} color="#F59E0B" />
-                    <Text style={styles.supplierRating}>
+                    <Text style={[styles.supplierRating, { color: colors.muted }]}>
                       {item.supplier.rating.toFixed(1)}
                       {item.supplier.reviews_count > 0 ? ` · ${item.supplier.reviews_count} отзывов` : ""}
                     </Text>
@@ -196,33 +210,32 @@ export default function ListingDetailScreen() {
 
           {/* Быстрая ссылка на сравнение в каталоге */}
           <TouchableOpacity
-            style={styles.catalogBanner}
+            style={[styles.catalogBanner, { backgroundColor: mode === "dark" ? "#161b22" : "#F0F9FF", borderColor: colors.border }]}
             onPress={() => router.push("/(app)/")}
             activeOpacity={0.8}
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.catalogBannerTitle}>Ищете где дешевле?</Text>
-              <Text style={styles.catalogBannerSub}>Сравните цены на аналогичные товары в каталоге →</Text>
+              <Text style={[styles.catalogBannerSub, { color: colors.muted }]}>Сравните цены на аналогичные товары в каталоге →</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0284C7" />
           </TouchableOpacity>
 
-          {/* Отступ в конце для безопасной прокрутки выше футера */}
           <View style={{ height: 40 }} />
         </ScrollView>
 
         {/* Плавающая нижняя панель действий */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           {item.contact_phone ? (
-            <TouchableOpacity style={styles.callBtn} onPress={handleCall} activeOpacity={0.8}>
+            <TouchableOpacity style={[styles.callBtn, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]} onPress={handleCall} activeOpacity={0.8}>
               <Ionicons name="call" size={18} color="#FFFFFF" />
               <Text style={styles.callBtnText}>Позвонить</Text>
             </TouchableOpacity>
           ) : null}
 
-          <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.8}>
-            <Ionicons name="chatbubble-ellipses" size={18} color="#0F172A" />
-            <Text style={styles.chatBtnText}>Написать</Text>
+          <TouchableOpacity style={[styles.chatBtn, { backgroundColor: mode === "dark" ? "#161b22" : "#F1F5F9", borderColor: colors.border }]} onPress={handleChat} activeOpacity={0.8}>
+            <Ionicons name="chatbubble-ellipses" size={18} color={colors.text} />
+            <Text style={[styles.chatBtnText, { color: colors.text }]}>Написать</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -231,9 +244,9 @@ export default function ListingDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 130 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC", padding: 24 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   
   topMetaRow: {
     flexDirection: "row",
@@ -249,50 +262,40 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
-  badgeService: { backgroundColor: "#E0F2FE" },
-  badgeMaterial: { backgroundColor: "#DCFCE7" },
   badgeText: { fontWeight: "600", fontSize: 12 },
-  badgeTextService: { color: "#0369A1" },
-  badgeTextMaterial: { color: "#166534" },
-  dateText: { fontSize: 12, color: "#94A3B8" },
+  dateText: { fontSize: 12 },
 
   mainCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  title: { fontSize: 20, fontWeight: "700", color: "#0F172A", marginBottom: 8, letterSpacing: -0.3 },
-  price: { fontSize: 24, fontWeight: "800", color: "#0F172A", marginBottom: 12, letterSpacing: -0.5 },
+  title: { fontSize: 20, fontWeight: "700", marginBottom: 8, letterSpacing: -0.3 },
+  price: { fontSize: 24, fontWeight: "800", marginBottom: 12, letterSpacing: -0.5 },
   locationRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  locationText: { color: "#64748B", fontSize: 14, fontWeight: "500" },
+  locationText: { fontSize: 14, fontWeight: "500" },
 
   sectionCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A", marginBottom: 10 },
-  desc: { fontSize: 15, lineHeight: 22, color: "#334155" },
-  mutedDesc: { color: "#94A3B8", fontSize: 14, fontStyle: "italic" },
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10 },
+  desc: { fontSize: 15, lineHeight: 22 },
+  mutedDesc: { fontSize: 14, fontStyle: "italic" },
 
   supplierRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   supplierAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#F0F9FF",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#BAE6FD",
   },
-  supplierName: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
+  supplierName: { fontSize: 15, fontWeight: "700" },
   verifiedBadge: {
     backgroundColor: "#0284C7",
     borderRadius: 8,
@@ -301,33 +304,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  supplierRating: { fontSize: 13, color: "#64748B", fontWeight: "500" },
+  supplierRating: { fontSize: 13, fontWeight: "500" },
 
   catalogBanner: {
-    backgroundColor: "#F0F9FF",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#BAE6FD",
   },
-  catalogBannerTitle: { color: "#0369A1", fontWeight: "700", fontSize: 14 },
-  catalogBannerSub: { color: "#0284C7", fontSize: 13, marginTop: 2, fontWeight: "500" },
+  catalogBannerTitle: { color: "#38bdf8", fontWeight: "700", fontSize: 14 },
+  catalogBannerSub: { fontSize: 13, marginTop: 2, fontWeight: "500" },
 
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 28,
     flexDirection: "row",
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
     elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
@@ -340,7 +339,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0F172A",
     borderRadius: 12,
     paddingVertical: 14,
   },
@@ -351,15 +349,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#F1F5F9",
     borderRadius: 12,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  chatBtnText: { color: "#0F172A", fontWeight: "700", fontSize: 15 },
+  chatBtnText: { fontWeight: "700", fontSize: 15 },
 
-  muted: { color: "#64748B", marginTop: 12, fontSize: 15 },
+  muted: { marginTop: 12, fontSize: 15 },
   backBtnEmpty: { marginTop: 16 },
   link: { color: "#0284C7", fontWeight: "600", fontSize: 15 },
 });

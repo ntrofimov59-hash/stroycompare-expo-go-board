@@ -19,9 +19,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
 import { api } from "../../src/api/client";
 import { useAuthStore } from "../../src/store/auth";
 import { useSettingsStore } from "../../src/store/settings";
+import { useThemeStore } from "../../src/store/theme";
 
 type Listing = {
   id: string;
@@ -38,6 +40,9 @@ export default function BoardScreen() {
   const token = useAuthStore((s) => s.accessToken);
   const regionId = useSettingsStore((s) => s.regionId);
   const regionName = useSettingsStore((s) => s.regionName);
+  
+  const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
 
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -58,7 +63,6 @@ export default function BoardScreen() {
   const [type, setType] = useState<"material" | "service">("material");
   const [saving, setSaving] = useState(false);
 
-  // Реализация Debounce для поиска
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(search.trim());
@@ -145,44 +149,44 @@ export default function BoardScreen() {
     return n.toLocaleString("ru-RU") + " ₽";
   };
 
-  // Вычисляем безопасный отступ снизу с учетом таб-бара (обычно высота табов ~60 + отступ устройства)
   const bottomFabOffset = Math.max(insets.bottom, 16) + 65;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: insets.top }}>
-      <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>
+      <StatusBar style={mode === "dark" ? "light" : "dark"} />
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
         {/* Хэдер с поиском */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <View style={styles.headerTopRow}>
             <View>
-              <Text style={styles.headerTitle}>Доска объявлений</Text>
-              <Text style={styles.headerSub}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Доска объявлений</Text>
+              <Text style={[styles.headerSub, { color: colors.muted }]}>
                 📍 {regionName || "Москва"} · Частные предложения и услуги
               </Text>
             </View>
           </View>
 
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color="#8E8E93" />
+          <View style={[styles.searchBox, { backgroundColor: mode === "dark" ? "#161b22" : "#F2F2F7" }]}>
+            <Ionicons name="search" size={18} color={colors.muted} />
             <TextInput
               ref={searchRef}
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Поиск по материалам и услугам..."
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={colors.muted}
               value={search}
               onChangeText={setSearch}
               returnKeyType="search"
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={18} color="#8E8E93" />
+                <Ionicons name="close-circle" size={18} color={colors.muted} />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
         {/* Фильтры */}
-        <View style={styles.filtersContainer}>
+        <View style={[styles.filtersContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
             {(
               [
@@ -195,15 +199,19 @@ export default function BoardScreen() {
               return (
                 <TouchableOpacity
                   key={f.key}
-                  style={[styles.chip, active && styles.chipActive]}
+                  style={[
+                    styles.chip, 
+                    { backgroundColor: mode === "dark" ? "#21262d" : "#F4F4F5" },
+                    active && styles.chipActive
+                  ]}
                   onPress={() => setFilter(f.key)}
                 >
                   <Ionicons
                     name={f.icon as any}
                     size={15}
-                    color={active ? "#fff" : "#52525B"}
+                    color={active ? "#fff" : colors.muted}
                   />
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                  <Text style={[styles.chipText, { color: colors.muted }, active && styles.chipTextActive]}>
                     {f.label}
                   </Text>
                 </TouchableOpacity>
@@ -234,9 +242,9 @@ export default function BoardScreen() {
             }
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Ionicons name="file-tray-outline" size={56} color="#D1D1D6" />
-                <Text style={styles.emptyTitle}>Ничего не найдено</Text>
-                <Text style={styles.emptySub}>
+                <Ionicons name="file-tray-outline" size={56} color={colors.muted} />
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>Ничего не найдено</Text>
+                <Text style={[styles.emptySub, { color: colors.muted }]}>
                   По вашему запросу нет объявлений или доска пока пуста. Станьте первыми!
                 </Text>
                 <TouchableOpacity style={styles.emptyBtn} onPress={handleOpenCreateModal}>
@@ -246,18 +254,27 @@ export default function BoardScreen() {
             }
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.card}
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
                 activeOpacity={0.75}
                 onPress={() => router.push(`/(app)/listing/${item.id}`)}
               >
                 {item.image ? (
-                  <Image source={{ uri: item.image }} style={styles.cardImage} />
+                  <Image 
+                    source={{ uri: item.image }} 
+                    style={[
+                      styles.cardImage, 
+                      { backgroundColor: mode === "dark" ? "#21262d" : "#F4F4F5" }
+                    ]} 
+                  />
                 ) : (
-                  <View style={styles.cardImage}>
+                  <View style={[
+                    styles.cardImagePlaceholder, 
+                    { backgroundColor: mode === "dark" ? "#21262d" : "#F4F4F5" }
+                  ]}>
                     <Ionicons
                       name={item.type === "service" ? "construct-outline" : "cube-outline"}
                       size={30}
-                      color="#A0A0A0"
+                      color={colors.muted}
                     />
                   </View>
                 )}
@@ -266,7 +283,7 @@ export default function BoardScreen() {
                     <View
                       style={[
                         styles.typeBadge,
-                        { backgroundColor: item.type === "service" ? "#FEF3C7" : "#E0F2FE" },
+                        { backgroundColor: item.type === "service" ? (mode === "dark" ? "#3b2d1c" : "#FEF3C7") : (mode === "dark" ? "#163353" : "#E0F2FE") },
                       ]}
                     >
                       <Text
@@ -280,24 +297,24 @@ export default function BoardScreen() {
                     </View>
                   </View>
 
-                  <Text style={styles.cardTitle} numberOfLines={2}>
+                  <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
                     {item.title}
                   </Text>
                   
-                  <Text style={styles.cardDesc} numberOfLines={1}>
+                  <Text style={[styles.cardDesc, { color: colors.muted }]} numberOfLines={1}>
                     {item.description || item.region?.name || "Регион не указан"}
                   </Text>
 
-                  <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
+                  <Text style={[styles.cardPrice, { color: colors.text }]}>{formatPrice(item.price)}</Text>
                 </View>
               </TouchableOpacity>
             )}
           />
         )}
 
-        {/* FAB кнопка добавления (поднята выше нижнего таб-бара) */}
+        {/* FAB кнопка добавления */}
         <TouchableOpacity
-          style={[styles.fab, { bottom: bottomFabOffset }]}
+          style={[styles.fab, { bottom: bottomFabOffset, backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]}
           activeOpacity={0.85}
           onPress={handleOpenCreateModal}
         >
@@ -305,15 +322,15 @@ export default function BoardScreen() {
           <Text style={styles.fabText}>Подать</Text>
         </TouchableOpacity>
 
-        {/* Модальное окно создания объявления */}
+        {/* Модальное окно */}
         <Modal visible={modal} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-            <SafeAreaView style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
+            <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => setModal(false)}>
                   <Text style={styles.modalCancelText}>Отмена</Text>
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>Новое объявление</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Новое объявление</Text>
                 <View style={{ width: 50 }} />
               </View>
 
@@ -322,82 +339,90 @@ export default function BoardScreen() {
                 style={{ flex: 1 }}
               >
                 <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
-                  <Text style={styles.label}>Тип объявления *</Text>
+                  <Text style={[styles.label, { color: colors.muted }]}>Тип объявления *</Text>
                   <View style={styles.typeRow}>
                     <TouchableOpacity
-                      style={[styles.typeBtn, type === "material" && styles.typeActive]}
+                      style={[
+                        styles.typeBtn, 
+                        { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border },
+                        type === "material" && styles.typeActive
+                      ]}
                       onPress={() => setType("material")}
                     >
                       <Ionicons
                         name="cube-outline"
                         size={18}
-                        color={type === "material" ? "#fff" : "#0F172A"}
+                        color={type === "material" ? "#fff" : colors.text}
                       />
-                      <Text style={[styles.typeText, type === "material" && styles.typeTextActive]}>
+                      <Text style={[styles.typeText, { color: colors.text }, type === "material" && styles.typeTextActive]}>
                         Материал
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.typeBtn, type === "service" && styles.typeActive]}
+                      style={[
+                        styles.typeBtn, 
+                        { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border },
+                        type === "service" && styles.typeActive
+                      ]}
                       onPress={() => setType("service")}
                     >
                       <Ionicons
                         name="construct-outline"
                         size={18}
-                        color={type === "service" ? "#fff" : "#0F172A"}
+                        color={type === "service" ? "#fff" : colors.text}
                       />
-                      <Text style={[styles.typeText, type === "service" && styles.typeTextActive]}>
+                      <Text style={[styles.typeText, { color: colors.text }, type === "service" && styles.typeTextActive]}>
                         Услуга
                       </Text>
                     </TouchableOpacity>
                   </View>
 
-                  <Text style={styles.label}>Заголовок *</Text>
+                  <Text style={[styles.label, { color: colors.muted }]}>Заголовок *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text, backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}
                     value={title}
                     onChangeText={setTitle}
                     placeholder="Например: Остатки арматуры А500С"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.muted}
                   />
 
-                  <Text style={styles.label}>Описание и условия</Text>
+                  <Text style={[styles.label, { color: colors.muted }]}>Описание и условия</Text>
                   <TextInput
-                    style={[styles.input, styles.textarea]}
+                    style={[styles.input, styles.textarea, { color: colors.text, backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}
                     value={description}
                     onChangeText={setDescription}
                     placeholder="Укажите характеристики, объем, самовывоз или доставку..."
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.muted}
                     multiline
                   />
 
-                  <Text style={styles.label}>Цена, ₽ (оставьте пустым, если договорная)</Text>
+                  <Text style={[styles.label, { color: colors.muted }]}>Цена, ₽ (оставьте пустым, если договорная)</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text, backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}
                     value={price}
                     onChangeText={setPrice}
                     keyboardType="decimal-pad"
                     placeholder="0"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.muted}
                   />
 
-                  <Text style={styles.label}>Телефон для связи</Text>
+                  <Text style={[styles.label, { color: colors.muted }]}>Телефон для связи</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text, backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}
                     value={phone}
                     onChangeText={setPhone}
                     keyboardType="phone-pad"
                     placeholder="+7 (999) 000-00-00"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.muted}
                   />
 
-                  <Text style={styles.label}>Ссылка на фото (опционально)</Text>
+                  <Text style={[styles.label, { color: colors.muted }]}>Ссылка на фото (опционально)</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text, backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}
                     value={imageUrl}
                     onChangeText={setImageUrl}
                     placeholder="https://example.com/image.jpg"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.muted}
                     autoCapitalize="none"
                   />
 
@@ -423,26 +448,25 @@ export default function BoardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F4F5" },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   
-  header: { backgroundColor: "#fff", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#E4E4E7" },
+  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: "#0F172A" },
-  headerSub: { color: "#707579", marginTop: 2, fontSize: 13, fontWeight: "500" },
+  headerTitle: { fontSize: 22, fontWeight: "800" },
+  headerSub: { marginTop: 2, fontSize: 13, fontWeight: "500" },
   
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F2F2F7",
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
     gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 15, color: "#0F172A", paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
 
-  filtersContainer: { backgroundColor: "#fff", paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#E4E4E7" },
+  filtersContainer: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   filters: { paddingHorizontal: 16, gap: 8 },
   chip: {
     flexDirection: "row",
@@ -450,18 +474,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#F4F4F5",
     gap: 6,
   },
   chipActive: { backgroundColor: "#2AABEE" },
-  chipText: { fontSize: 13, color: "#52525B", fontWeight: "600" },
+  chipText: { fontSize: 13, fontWeight: "600" },
   chipTextActive: { color: "#fff", fontWeight: "700" },
 
   list: { padding: 16 },
   
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 12,
@@ -471,13 +493,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E4E7",
   },
-  cardImage: {
+ cardImage: {
     width: 110,
     height: "100%",
     minHeight: 110,
-    backgroundColor: "#F4F4F5",
+  },
+  cardImagePlaceholder: {
+    width: 110,
+    height: "100%",
+    minHeight: 110,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -486,20 +511,19 @@ const styles = StyleSheet.create({
   typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   typeBadgeText: { fontSize: 10, fontWeight: "700" },
   
-  cardTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A", lineHeight: 20 },
-  cardDesc: { marginTop: 2, fontSize: 12, color: "#707579" },
-  cardPrice: { marginTop: 6, fontSize: 16, fontWeight: "800", color: "#0F172A" },
+  cardTitle: { fontSize: 15, fontWeight: "700", lineHeight: 20 },
+  cardDesc: { marginTop: 2, fontSize: 12 },
+  cardPrice: { marginTop: 6, fontSize: 16, fontWeight: "800" },
 
   empty: { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
-  emptyTitle: { marginTop: 12, fontSize: 17, fontWeight: "700", color: "#0F172A" },
-  emptySub: { marginTop: 6, fontSize: 14, color: "#707579", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { marginTop: 12, fontSize: 17, fontWeight: "700" },
+  emptySub: { marginTop: 6, fontSize: 14, textAlign: "center", lineHeight: 20 },
   emptyBtn: { marginTop: 20, backgroundColor: "#2AABEE", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
   emptyBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   fab: {
     position: "absolute",
     right: 20,
-    backgroundColor: "#0F172A",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 18,
@@ -516,7 +540,7 @@ const styles = StyleSheet.create({
   fabText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalContainer: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", flex: 1 },
+  modalContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", flex: 1 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -524,21 +548,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E4E4E7",
   },
   modalCancelText: { color: "#2AABEE", fontWeight: "600", fontSize: 15 },
-  modalTitle: { fontWeight: "700", fontSize: 17, color: "#0F172A" },
+  modalTitle: { fontWeight: "700", fontSize: 17 },
   
   modalScroll: { padding: 16, paddingBottom: 40 },
-  label: { fontSize: 13, color: "#475569", marginBottom: 6, fontWeight: "600", marginTop: 12 },
+  label: { fontSize: 13, marginBottom: 6, fontWeight: "600", marginTop: 12 },
   input: {
     borderWidth: 1,
-    borderColor: "#E4E4E7",
     borderRadius: 12,
     padding: 12,
     fontSize: 15,
-    color: "#0F172A",
-    backgroundColor: "#FAFAFA",
   },
   textarea: { minHeight: 90, textAlignVertical: "top" },
   
@@ -549,14 +569,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E4E4E7",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FAFAFA",
     gap: 6,
   },
   typeActive: { backgroundColor: "#0F172A", borderColor: "#0F172A" },
-  typeText: { fontWeight: "600", color: "#0F172A", fontSize: 14 },
+  typeText: { fontWeight: "600", fontSize: 14 },
   typeTextActive: { color: "#fff" },
 
   saveBtn: {

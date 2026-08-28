@@ -15,6 +15,7 @@ import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api/client";
 import { useAuthStore } from "../../src/store/auth";
+import { useThemeStore } from "../../src/store/theme";
 
 const PLAN_ID = "c0000001-0000-0000-0000-000000000002";
 
@@ -48,6 +49,7 @@ const FEATURES = [
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const { accessToken, user } = useAuthStore();
+  const { mode, colors } = useThemeStore();
   const [mySub, setMySub] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
@@ -144,15 +146,15 @@ export default function SubscriptionScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.center, { paddingTop: insets.top, backgroundColor: colors.bg }]}>
         <ActivityIndicator color="#E8A017" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF", paddingTop: insets.top }}>
-      <View style={styles.root}>
+    <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>
+      <View style={[styles.root, { backgroundColor: colors.bg }]}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
@@ -163,14 +165,18 @@ export default function SubscriptionScreen() {
             <Animated.View
               style={[
                 styles.starWrap,
-                { opacity: glow, transform: [{ scale }] },
+                { 
+                  opacity: glow, 
+                  transform: [{ scale }],
+                  backgroundColor: mode === "dark" ? "#33270c" : "#FFF6E0" 
+                },
               ]}
             >
               <Ionicons name="diamond" size={56} color="#E8A017" />
             </Animated.View>
-            <Text style={styles.brand}>StroyCompare</Text>
-            <Text style={styles.h1}>Premium</Text>
-            <Text style={styles.lead}>
+            <Text style={[styles.brand, { color: colors.muted }]}>StroyCompare</Text>
+            <Text style={[styles.h1, { color: colors.text }]}>Premium</Text>
+            <Text style={[styles.lead, { color: colors.muted }]}>
               {hasSub
                 ? `Подписка активна${until ? ` до ${until}` : ""}`
                 : "Скидка в сравнении цен и доступ к кабинету поставщика"}
@@ -178,21 +184,21 @@ export default function SubscriptionScreen() {
           </Animated.View>
 
           {FEATURES.map((f, i) => (
-            <FeatureRow key={f.title} {...f} index={i} />
+            <FeatureRow key={f.title} {...f} index={i} colors={colors} />
           ))}
 
           {hasSub && isSupplier && (
             <TouchableOpacity
-              style={styles.linkCard}
+              style={[styles.linkCard, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7" }]}
               onPress={() => router.push("/(app)/supplier-offers")}
               activeOpacity={0.7}
             >
               <Ionicons name="list-outline" size={22} color="#5B8DEF" />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.linkTitle}>Мои предложения</Text>
-                <Text style={styles.linkSub}>Цены в таблице сравнения</Text>
+                <Text style={[styles.linkTitle, { color: colors.text }]}>Мои предложения</Text>
+                <Text style={[styles.linkSub, { color: colors.muted }]}>Цены в таблице сравнения</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </TouchableOpacity>
           )}
 
@@ -201,10 +207,10 @@ export default function SubscriptionScreen() {
         </ScrollView>
 
         {/* Плавающая кнопка поднята выше таб-бара */}
-        <View style={styles.dock}>
+        <View style={[styles.dock, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
           {!hasSub ? (
             <>
-              <Text style={styles.dockPrice}>699 ₽ · 90 дней</Text>
+              <Text style={[styles.dockPrice, { color: colors.muted }]}>699 ₽ · 90 дней</Text>
               <TouchableOpacity
                 style={styles.cta}
                 onPress={purchase}
@@ -239,12 +245,14 @@ function FeatureRow({
   title,
   text,
   index,
+  colors,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   title: string;
   text: string;
   index: number;
+  colors: any;
 }) {
   const a = useRef(new Animated.Value(0)).current;
 
@@ -266,40 +274,37 @@ function FeatureRow({
         <Ionicons name={icon} size={20} color="#fff" />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.featTitle}>{title}</Text>
-        <Text style={styles.featText}>{text}</Text>
+        <Text style={[styles.featTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.featText, { color: colors.muted }]}>{text}</Text>
       </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#FFFFFF" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
+  root: { flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   scroll: { paddingHorizontal: 20, paddingTop: 28 },
   hero: { alignItems: "center", marginBottom: 28 },
   starWrap: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#FFF6E0",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
-  brand: { fontSize: 13, fontWeight: "600", color: "#8E8E93", letterSpacing: 0.4 },
+  brand: { fontSize: 13, fontWeight: "600", letterSpacing: 0.4 },
   h1: {
     marginTop: 4,
     fontSize: 34,
     fontWeight: "800",
-    color: "#0F172A",
     letterSpacing: -0.6,
   },
   lead: {
     marginTop: 8,
     fontSize: 15,
     lineHeight: 21,
-    color: "#8E8E93",
     textAlign: "center",
     paddingHorizontal: 12,
   },
@@ -311,37 +316,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  featTitle: { fontSize: 17, fontWeight: "700", color: "#0F172A" },
-  featText: { marginTop: 4, fontSize: 14, lineHeight: 20, color: "#8E8E93" },
+  featTitle: { fontSize: 17, fontWeight: "700" },
+  featText: { marginTop: 4, fontSize: 14, lineHeight: 20 },
   linkCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F2F2F7",
     borderRadius: 16,
     padding: 14,
     marginTop: 8,
   },
-  linkTitle: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
-  linkSub: { marginTop: 2, fontSize: 13, color: "#8E8E93" },
+  linkTitle: { fontSize: 16, fontWeight: "600" },
+  linkSub: { marginTop: 2, fontSize: 13 },
   dock: {
     position: "absolute",
     left: 0,
     right: 0,
-    // Установлено выше плавающего таб-бара (высота таб-бара ~56 + отступ снизу 10 + зазор)
     bottom: 74,
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 8,
-    backgroundColor: "#FFFFFF",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E5E5EA",
   },
   dockPrice: {
     textAlign: "center",
     marginBottom: 6,
     fontSize: 14,
     fontWeight: "600",
-    color: "#8E8E93",
   },
   cta: {
     backgroundColor: "#E8A017",
