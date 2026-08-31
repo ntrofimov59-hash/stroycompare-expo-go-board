@@ -77,6 +77,7 @@ export default function BoardScreen() {
         params: {
           type: filter === "all" ? undefined : filter,
           search: query || undefined,
+          region_id: regionId || undefined,
         },
       });
       setItems(data.listings || data || []);
@@ -86,7 +87,7 @@ export default function BoardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter, query]);
+  }, [filter, query, regionId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -116,11 +117,10 @@ export default function BoardScreen() {
     }
     setSaving(true);
     try {
-      const p = parseFloat(price.replace(",", "."));
       await api.post("/listings", {
         title,
         description,
-        price: price ? Number(price) : undefined,
+        price: price ? parseFloat(price.replace(",", ".")) : undefined,
         contact_phone: phone,
         type,
         region_id: regionId || undefined,
@@ -156,15 +156,15 @@ export default function BoardScreen() {
         {/* Хэдер с поиском */}
         <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <View style={styles.headerTopRow}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.headerTitle, { color: colors.text }]}>Доска объявлений</Text>
-              <Text style={[styles.headerSub, { color: colors.muted }]}>
-                📍 {regionName || "Москва"} · Частные предложения и услуги
+              <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
+                📍 {regionName || "Все регионы"} · Частные предложения и услуги
               </Text>
             </View>
           </View>
 
-          <View style={[styles.searchBox, { backgroundColor: mode === "dark" ? "#161b22" : "#F2F2F7" }]}>
+          <View style={[styles.searchBox, { backgroundColor: mode === "dark" ? "#161b22" : "#F2F2F7", borderColor: colors.border }]}>
             <Ionicons name="search" size={18} color={colors.muted} />
             <TextInput
               ref={searchRef}
@@ -199,8 +199,8 @@ export default function BoardScreen() {
                   key={f.key}
                   style={[
                     styles.chip, 
-                    { backgroundColor: mode === "dark" ? "#21262d" : "#F4F4F5" },
-                    active && styles.chipActive
+                    { backgroundColor: mode === "dark" ? "#21262d" : "#F4F4F5", borderColor: colors.border },
+                    active && [styles.chipActive, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A", borderColor: mode === "dark" ? "#30363d" : "#0F172A" }]
                   ]}
                   onPress={() => setFilter(f.key)}
                 >
@@ -221,7 +221,7 @@ export default function BoardScreen() {
         {/* Список */}
         {loading && !refreshing ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#2AABEE" />
+            <ActivityIndicator size="large" color="#0284C7" />
           </View>
         ) : (
           <FlatList
@@ -235,8 +235,16 @@ export default function BoardScreen() {
                   setRefreshing(true);
                   load(true);
                 }}
-                tintColor="#2AABEE"
+                tintColor="#0284C7"
               />
+            }
+            ListHeaderComponent={
+              <View style={styles.noticeBox}>
+                <Ionicons name="shield-checkmark-outline" size={15} color={colors.muted} />
+                <Text style={[styles.noticeText, { color: colors.muted }]}>
+                  Объявления публикуют пользователи. Проверяйте продавца перед сделкой.
+                </Text>
+              </View>
             }
             ListEmptyComponent={
               <View style={styles.empty}>
@@ -245,7 +253,7 @@ export default function BoardScreen() {
                 <Text style={[styles.emptySub, { color: colors.muted }]}>
                   По вашему запросу нет объявлений или доска пока пуста. Станьте первыми!
                 </Text>
-                <TouchableOpacity style={styles.emptyBtn} onPress={handleOpenCreateModal}>
+                <TouchableOpacity style={styles.emptyBtn} onPress={handleOpenCreateModal} activeOpacity={0.8}>
                   <Text style={styles.emptyBtnText}>Разместить объявление</Text>
                 </TouchableOpacity>
               </View>
@@ -271,7 +279,7 @@ export default function BoardScreen() {
                   ]}>
                     <Ionicons
                       name={item.type === "service" ? "construct-outline" : "cube-outline"}
-                      size={30}
+                      size={28}
                       color={colors.muted}
                     />
                   </View>
@@ -293,6 +301,12 @@ export default function BoardScreen() {
                         {item.type === "service" ? "Услуга" : "Материал"}
                       </Text>
                     </View>
+
+                    {item.region?.name ? (
+                      <Text style={[styles.cardRegion, { color: colors.muted }]} numberOfLines={1}>
+                        {item.region.name}
+                      </Text>
+                    ) : null}
                   </View>
 
                   <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
@@ -300,7 +314,7 @@ export default function BoardScreen() {
                   </Text>
                   
                   <Text style={[styles.cardDesc, { color: colors.muted }]} numberOfLines={1}>
-                    {item.description || item.region?.name || "Регион не указан"}
+                    {item.description || "Без описания"}
                   </Text>
 
                   <Text style={[styles.cardPrice, { color: colors.text }]}>{formatPrice(item.price)}</Text>
@@ -316,7 +330,7 @@ export default function BoardScreen() {
           activeOpacity={0.85}
           onPress={handleOpenCreateModal}
         >
-          <Ionicons name="add" size={24} color="#fff" />
+          <Ionicons name="add" size={20} color="#fff" />
           <Text style={styles.fabText}>Подать</Text>
         </TouchableOpacity>
 
@@ -325,8 +339,8 @@ export default function BoardScreen() {
           <View style={styles.modalOverlay}>
             <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.card }]}>
               <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => setModal(false)}>
-                  <Text style={styles.modalCancelText}>Отмена</Text>
+                <TouchableOpacity onPress={() => setModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>Отмена</Text>
                 </TouchableOpacity>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>Новое объявление</Text>
                 <View style={{ width: 50 }} />
@@ -337,13 +351,20 @@ export default function BoardScreen() {
                 style={{ flex: 1 }}
               >
                 <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                  <View style={[styles.modalNoticeBox, { backgroundColor: mode === "dark" ? "#161b22" : "#F8FAFC", borderColor: colors.border }]}>
+                    <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+                    <Text style={[styles.modalNoticeText, { color: colors.muted }]}>
+                      Объявления публикуют пользователи. Проверяйте продавца перед сделкой.
+                    </Text>
+                  </View>
+
                   <Text style={[styles.label, { color: colors.muted }]}>Тип объявления *</Text>
                   <View style={styles.typeRow}>
                     <TouchableOpacity
                       style={[
                         styles.typeBtn, 
                         { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border },
-                        type === "material" && styles.typeActive
+                        type === "material" && [styles.typeActive, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A", borderColor: mode === "dark" ? "#30363d" : "#0F172A" }]
                       ]}
                       onPress={() => setType("material")}
                     >
@@ -360,7 +381,7 @@ export default function BoardScreen() {
                       style={[
                         styles.typeBtn, 
                         { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border },
-                        type === "service" && styles.typeActive
+                        type === "service" && [styles.typeActive, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A", borderColor: mode === "dark" ? "#30363d" : "#0F172A" }]
                       ]}
                       onPress={() => setType("service")}
                     >
@@ -425,9 +446,10 @@ export default function BoardScreen() {
                   />
 
                   <TouchableOpacity
-                    style={styles.saveBtn}
+                    style={[styles.saveBtn, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]}
                     onPress={create}
                     disabled={saving}
+                    activeOpacity={0.8}
                   >
                     {saving ? (
                       <ActivityIndicator color="#fff" />
@@ -449,9 +471,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   
-  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  headerTitle: { fontSize: 22, fontWeight: "800" },
+  headerTitle: { fontSize: 20, fontWeight: "700", letterSpacing: -0.3 },
   headerSub: { marginTop: 2, fontSize: 13, fontWeight: "500" },
   
   searchBox: {
@@ -461,24 +483,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
     gap: 8,
+    borderWidth: 1,
   },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
 
-  filtersContainer: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  filtersContainer: { paddingVertical: 8, borderBottomWidth: 1 },
   filters: { paddingHorizontal: 16, gap: 8 },
   chip: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 20,
     gap: 6,
+    borderWidth: 1,
   },
-  chipActive: { backgroundColor: "#2AABEE" },
-  chipText: { fontSize: 13, fontWeight: "600" },
-  chipTextActive: { color: "#fff", fontWeight: "700" },
+  chipActive: {},
+  chipText: { fontSize: 13, fontWeight: "500" },
+  chipTextActive: { color: "#fff", fontWeight: "600" },
 
   list: { padding: 16 },
+
+  noticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  noticeText: {
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
+  },
+
+  modalNoticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 8,
+    marginBottom: 12,
+  },
+  modalNoticeText: {
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
+    lineHeight: 16,
+  },
   
   card: {
     flexDirection: "row",
@@ -487,10 +540,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: "#000",
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
   },
   cardImage: {
     width: 110,
@@ -505,9 +558,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cardBody: { flex: 1, padding: 12, justifyContent: "center" },
-  cardTopRow: { flexDirection: "row", marginBottom: 4 },
+  cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   typeBadgeText: { fontSize: 10, fontWeight: "700" },
+  cardRegion: { fontSize: 11, fontWeight: "500", maxWidth: "55%" },
   
   cardTitle: { fontSize: 15, fontWeight: "700", lineHeight: 20 },
   cardDesc: { marginTop: 2, fontSize: 12 },
@@ -516,7 +570,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
   emptyTitle: { marginTop: 12, fontSize: 17, fontWeight: "700" },
   emptySub: { marginTop: 6, fontSize: 14, textAlign: "center", lineHeight: 20 },
-  emptyBtn: { marginTop: 20, backgroundColor: "#2AABEE", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
+  emptyBtn: { marginTop: 20, backgroundColor: "#0F172A", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
   emptyBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   fab: {
@@ -524,18 +578,18 @@ const styles = StyleSheet.create({
     right: 20,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
     gap: 6,
     shadowColor: "#000",
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
     zIndex: 10,
   },
-  fabText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  fabText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   modalContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", flex: 1 },
@@ -545,9 +599,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
   },
-  modalCancelText: { color: "#2AABEE", fontWeight: "600", fontSize: 15 },
+  modalCancelText: { fontWeight: "600", fontSize: 15 },
   modalTitle: { fontWeight: "700", fontSize: 17 },
   
   modalScroll: { padding: 16, paddingBottom: 40 },
@@ -571,12 +625,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  typeActive: { backgroundColor: "#0F172A", borderColor: "#0F172A" },
+  typeActive: {},
   typeText: { fontWeight: "600", fontSize: 14 },
   typeTextActive: { color: "#fff" },
 
   saveBtn: {
-    backgroundColor: "#2AABEE",
     borderRadius: 12,
     height: 50,
     alignItems: "center",

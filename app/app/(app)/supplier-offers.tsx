@@ -11,9 +11,12 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useFocusEffect, Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../src/api/client";
 import { useSettingsStore } from "../../src/store/settings";
 import { useThemeStore } from "../../src/store/theme";
@@ -35,6 +38,7 @@ type CatalogProduct = {
 };
 
 export default function SupplierOffersScreen() {
+  const insets = useSafeAreaInsets();
   const currentRegionId = useSettingsStore((s: any) => s.regionId);
   const currentRegionName = useSettingsStore((s: any) => s.regionName);
   const { mode, colors } = useThemeStore();
@@ -148,6 +152,8 @@ export default function SupplierOffersScreen() {
     ]);
   };
 
+  const bottomFabOffset = Math.max(insets.bottom, 16) + 55;
+
   return (
     <>
       <Stack.Screen
@@ -155,7 +161,7 @@ export default function SupplierOffersScreen() {
           title: "Мои предложения",
           headerRight: () => (
             <TouchableOpacity onPress={handleOpenModal} style={styles.headerBtn}>
-              <Ionicons name="add" size={22} color="#2AABEE" />
+              <Ionicons name="add" size={22} color="#0284C7" />
               <Text style={styles.headerBtnText}>Добавить</Text>
             </TouchableOpacity>
           ),
@@ -165,13 +171,13 @@ export default function SupplierOffersScreen() {
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
         {loading && !refreshing ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#2AABEE" />
+            <ActivityIndicator size="large" color="#0284C7" />
           </View>
         ) : (
           <FlatList
             data={offers}
             keyExtractor={(i) => i.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: bottomFabOffset + 40 }]}
             ListHeaderComponent={
               <View style={{ marginBottom: 12 }}>
                 {subInfo?.has_subscription ? (
@@ -194,7 +200,7 @@ export default function SupplierOffersScreen() {
                   setRefreshing(true);
                   load(true);
                 }}
-                tintColor="#2AABEE"
+                tintColor="#0284C7"
               />
             }
             ListEmptyComponent={
@@ -203,13 +209,13 @@ export default function SupplierOffersScreen() {
                 <Text style={[styles.emptyText, { color: colors.muted }]}>
                   У вас пока нет активных предложений. Добавьте цены, чтобы они появились в общем сравнении.
                 </Text>
-                <TouchableOpacity style={styles.emptyBtn} onPress={handleOpenModal}>
+                <TouchableOpacity style={styles.emptyBtn} onPress={handleOpenModal} activeOpacity={0.8}>
                   <Text style={styles.emptyBtnText}>Добавить первую цену</Text>
                 </TouchableOpacity>
               </View>
             }
             renderItem={({ item }) => (
-              <View style={[styles.card, { backgroundColor: colors.card }]}>
+              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.cardHeader}>
                   <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
                     {item.product?.name || "Товар"}
@@ -258,8 +264,12 @@ export default function SupplierOffersScreen() {
         )}
 
         {/* Плавающая кнопка для быстрого доступа */}
-        <TouchableOpacity style={styles.fab} onPress={handleOpenModal} activeOpacity={0.8}>
-          <Ionicons name="add" size={24} color="#fff" />
+        <TouchableOpacity
+          style={[styles.fab, { bottom: bottomFabOffset, backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]}
+          onPress={handleOpenModal}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={20} color="#fff" />
           <Text style={styles.fabText}>Новая цена</Text>
         </TouchableOpacity>
 
@@ -270,84 +280,90 @@ export default function SupplierOffersScreen() {
               <View style={[styles.modalIndicator, { backgroundColor: colors.border }]} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>Добавить предложение</Text>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={[styles.label, { color: colors.muted }]}>Выберите товар из каталога *</Text>
-                <View style={[styles.catalogBox, { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}>
-                  {catalogProducts.length === 0 ? (
-                    <ActivityIndicator size="small" color="#2AABEE" style={{ padding: 10 }} />
-                  ) : (
-                    catalogProducts.map((p) => (
-                      <TouchableOpacity
-                        key={p.id}
-                        style={[
-                          styles.catalogItem,
-                          selectedProduct?.id === p.id && styles.catalogItemActive,
-                        ]}
-                        onPress={() => setSelectedProduct(p)}
-                      >
-                        <Text
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flexShrink: 1 }}
+              >
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                  <Text style={[styles.label, { color: colors.muted }]}>Выберите товар из каталога *</Text>
+                  <View style={[styles.catalogBox, { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", borderColor: colors.border }]}>
+                    {catalogProducts.length === 0 ? (
+                      <ActivityIndicator size="small" color="#0284C7" style={{ padding: 10 }} />
+                    ) : (
+                      catalogProducts.map((p) => (
+                        <TouchableOpacity
+                          key={p.id}
                           style={[
-                            styles.catalogItemText,
-                            { color: colors.text },
-                            selectedProduct?.id === p.id && styles.catalogItemTextActive,
+                            styles.catalogItem,
+                            selectedProduct?.id === p.id && [styles.catalogItemActive, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }],
                           ]}
+                          onPress={() => setSelectedProduct(p)}
                         >
-                          {p.name} ({p.unit})
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                  )}
-                </View>
-
-                <Text style={[styles.label, { color: colors.muted }]}>Цена за 1 {selectedProduct?.unit || "ед."} (₽) *</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7", color: colors.text }]}
-                  value={price}
-                  onChangeText={setPrice}
-                  keyboardType="decimal-pad"
-                  placeholder="Например: 1500"
-                  placeholderTextColor={colors.muted}
-                />
-
-                <View style={styles.rowInputs}>
-                  <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text style={[styles.label, { color: colors.muted }]}>Мин. объем</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7", color: colors.text }]}
-                      value={minQty}
-                      onChangeText={setMinQty}
-                      keyboardType="numeric"
-                      placeholderTextColor={colors.muted}
-                    />
+                          <Text
+                            style={[
+                              styles.catalogItemText,
+                              { color: colors.text },
+                              selectedProduct?.id === p.id && styles.catalogItemTextActive,
+                            ]}
+                          >
+                            {p.name} ({p.unit})
+                          </Text>
+                        </TouchableOpacity>
+                      ))
+                    )}
                   </View>
-                  <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={[styles.label, { color: colors.muted }]}>Срок (дней)</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: mode === "dark" ? "#21262d" : "#F2F2F7", color: colors.text }]}
-                      value={deliveryDays}
-                      onChangeText={setDeliveryDays}
-                      keyboardType="numeric"
-                      placeholderTextColor={colors.muted}
-                    />
+
+                  <Text style={[styles.label, { color: colors.muted }]}>Цена за 1 {selectedProduct?.unit || "ед."} (₽) *</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", color: colors.text, borderColor: colors.border }]}
+                    value={price}
+                    onChangeText={setPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="Например: 1500"
+                    placeholderTextColor={colors.muted}
+                  />
+
+                  <View style={styles.rowInputs}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={[styles.label, { color: colors.muted }]}>Мин. объем</Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", color: colors.text, borderColor: colors.border }]}
+                        value={minQty}
+                        onChangeText={setMinQty}
+                        keyboardType="numeric"
+                        placeholderTextColor={colors.muted}
+                      />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={[styles.label, { color: colors.muted }]}>Срок (дней)</Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: mode === "dark" ? "#161b22" : "#FAFAFA", color: colors.text, borderColor: colors.border }]}
+                        value={deliveryDays}
+                        onChangeText={setDeliveryDays}
+                        keyboardType="numeric"
+                        placeholderTextColor={colors.muted}
+                      />
+                    </View>
                   </View>
-                </View>
 
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={createOffer}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveText}>Опубликовать в прайс</Text>
-                  )}
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveBtn, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]}
+                    onPress={createOffer}
+                    disabled={saving}
+                    activeOpacity={0.8}
+                  >
+                    {saving ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.saveText}>Опубликовать в прайс</Text>
+                    )}
+                  </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setModal(false)} style={{ paddingVertical: 12 }}>
-                  <Text style={[styles.cancel, { color: colors.muted }]}>Отмена</Text>
-                </TouchableOpacity>
-              </ScrollView>
+                  <TouchableOpacity onPress={() => setModal(false)} style={{ paddingVertical: 12 }}>
+                    <Text style={[styles.cancel, { color: colors.muted }]}>Отмена</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </KeyboardAvoidingView>
             </View>
           </View>
         </Modal>
@@ -360,8 +376,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   headerBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: 4 },
-  headerBtnText: { color: "#2AABEE", fontWeight: "600", fontSize: 15 },
-  list: { padding: 16, paddingBottom: 100 },
+  headerBtnText: { color: "#0284C7", fontWeight: "600", fontSize: 15 },
+  list: { padding: 16 },
   
   card: {
     borderRadius: 16,
@@ -369,9 +385,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
   name: { fontSize: 16, fontWeight: "600", flex: 1 },
@@ -386,27 +403,26 @@ const styles = StyleSheet.create({
 
   emptyContainer: { alignItems: "center", marginTop: 60, paddingHorizontal: 24 },
   emptyText: { textAlign: "center", marginTop: 12, fontSize: 14, lineHeight: 20 },
-  emptyBtn: { marginTop: 16, backgroundColor: "#2AABEE", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  emptyBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  emptyBtn: { marginTop: 16, backgroundColor: "#0F172A", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
+  emptyBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 24,
-    backgroundColor: "#0F172A",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
     gap: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 6,
+    elevation: 6,
+    zIndex: 10,
   },
-  fabText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  fabText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 
   modalBg: {
     flex: 1,
@@ -431,19 +447,19 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: 12,
     padding: 12,
-    fontSize: 16,
+    fontSize: 15,
+    borderWidth: 1,
   },
   rowInputs: { flexDirection: "row" },
   catalogBox: { maxHeight: 160, borderWidth: 1, borderRadius: 12, padding: 6 },
   catalogItem: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8 },
-  catalogItemActive: { backgroundColor: "#2AABEE" },
+  catalogItemActive: { backgroundColor: "#0F172A" },
   catalogItemText: { fontSize: 14 },
   catalogItemTextActive: { color: "#FFFFFF", fontWeight: "600" },
 
   saveBtn: {
-    backgroundColor: "#2AABEE",
     borderRadius: 12,
-    height: 48,
+    height: 50,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,

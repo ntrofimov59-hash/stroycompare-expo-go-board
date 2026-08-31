@@ -13,6 +13,7 @@ import {
   Image,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -25,31 +26,13 @@ import { useThemeStore } from "../../src/store/theme";
 import { useSettingsStore } from "../../src/store/settings";
 import { FilterSheet, Filters } from "../../src/components/FilterSheet";
 import { RegionPicker } from "../../src/components/RegionPicker";
+import { EmptyState } from "../../src/components/EmptyState";
 
 const SLIDES = [
   { id: "f0000001-0000-0000-0000-000000000001", title: "Цемент М500", text: "Сравните мешок за минуту" },
   { id: "f0000001-0000-0000-0000-000000000002", title: "Арматура 12 мм", text: "Цены за тонну в вашем регионе" },
   { id: "f0000001-0000-0000-0000-000000000003", title: "Кладка кирпича", text: "Услуги подрядчиков рядом" },
 ];
-
-function EmptyState({
-  icon,
-  title,
-  text,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  text: string;
-}) {
-  const colors = useThemeStore((s) => s.colors);
-  return (
-    <View style={styles.emptyWrap}>
-      <Ionicons name={icon} size={48} color={colors.muted} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.emptyText, { color: colors.muted }]}>{text}</Text>
-    </View>
-  );
-}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -113,6 +96,7 @@ export default function HomeScreen() {
       setProducts(list);
     } catch (e) {
       console.log("home error", e);
+      Alert.alert("Нет связи", "Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -307,8 +291,14 @@ export default function HomeScreen() {
             ListEmptyComponent={
               <EmptyState
                 icon="cube-outline"
-                title="Нет позиций"
-                text="Измените фильтры или поисковый запрос"
+                title="Нет товаров"
+                text="Измените поиск или фильтр"
+                actionLabel="Сбросить фильтр"
+                onAction={() => {
+                  setSearch("");
+                  setQuery("");
+                  setFilters({ categoryId: "", type: "", unit: "" });
+                }}
               />
             }
           />
@@ -428,7 +418,4 @@ const styles = StyleSheet.create({
   cardPrice: { fontSize: 14, fontWeight: "700", color: "#2AABEE" },
 
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyWrap: { paddingTop: 60, alignItems: "center", paddingHorizontal: 24 },
-  emptyTitle: { marginTop: 12, fontSize: 16, fontWeight: "600" },
-  emptyText: { marginTop: 6, fontSize: 13, textAlign: "center" },
 });

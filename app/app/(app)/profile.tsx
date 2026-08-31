@@ -62,7 +62,8 @@ export default function ProfileScreen() {
       } else if (msg.includes("already")) {
         Alert.alert("Вы уже поставщик");
       } else {
-        Alert.alert("Ошибка", msg || "Не удалось");
+        console.log("profile error", e);
+        Alert.alert("Нет связи", "Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.");
       }
     } finally {
       setLoading(false);
@@ -95,8 +96,10 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await api.delete("/users/me");
-            } catch {
-              // эндпоинта может не быть — не блокируем выход
+            } catch (e) {
+              console.log("delete account error", e);
+              Alert.alert("Нет связи", "Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.");
+              return;
             }
             await logout();
             router.replace("/(auth)/login");

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../../src/api/client";
 import { useSettingsStore } from "../../../src/store/settings";
 import { useThemeStore } from "../../../src/store/theme";
+import { EmptyState } from "../../../src/components/EmptyState";
 
 type Offer = {
   id: string;
@@ -101,10 +102,7 @@ export default function ProductCompareScreen() {
           { text: "Закрыть", style: "cancel" },
           { 
             text: "Позвонить", 
-            onPress: () => {
-              // Здесь можно добавить вызов Linking.openURL(`tel:${phone}`) при необходимости,
-              // сейчас сохраняем логику действия связи.
-            }
+            onPress: () => {}
           },
           { 
             text: "Написать в чат", 
@@ -328,26 +326,28 @@ export default function ProductCompareScreen() {
             />
           }
           ListFooterComponent={
-            <Text
-              style={{
-                fontSize: 12,
-                color: colors.muted,
-                textAlign: "center",
-                marginTop: 16,
-                marginBottom: 24,
-                lineHeight: 17,
-                paddingHorizontal: 8,
-              }}
-            >
-              StroyCompare не продаёт товары и не является стороной сделки. Цены справочные. Условия уточняйте у поставщика.
-            </Text>
+            offers.length > 0 ? (
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: colors.muted,
+                  textAlign: "center",
+                  marginTop: 16,
+                  marginBottom: 24,
+                  lineHeight: 17,
+                  paddingHorizontal: 8,
+                }}
+              >
+                StroyCompare не продаёт товары и не является стороной сделки. Цены справочные. Условия уточняйте у поставщика.
+              </Text>
+            ) : null
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={48} color={colors.muted} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>Предложений пока нет</Text>
-              <Text style={[styles.emptyDesc, { color: colors.muted }]}>В выбранном регионе никто из поставщиков еще не выставил этот товар</Text>
-            </View>
+            <EmptyState
+              icon="search-outline"
+              title="Предложений пока нет"
+              text="В выбранном регионе никто из поставщиков еще не выставил этот товар"
+            />
           }
         />
       </View>
@@ -517,7 +517,4 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
-  emptyContainer: { alignItems: "center", justifyContent: "center", paddingTop: 60, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", marginTop: 12 },
-  emptyDesc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
 });

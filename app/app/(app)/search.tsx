@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -35,6 +36,7 @@ export default function SearchScreen() {
       setListings(l.data.listings || []);
     } catch (e) {
       console.log("Search error", e);
+      Alert.alert("Нет связи", "Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.");
     }
   };
 
