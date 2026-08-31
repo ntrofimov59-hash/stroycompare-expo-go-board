@@ -85,10 +85,17 @@ type ProductImage struct {
 }
 
 type Region struct {
-	ID       uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name     string     `gorm:"size:100;not null" json:"name"`
-	Slug     string     `gorm:"size:100;uniqueIndex;not null" json:"slug"`
-	ParentID *uuid.UUID `gorm:"type:uuid" json:"parent_id,omitempty"`
+	ID          uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Name        string     `gorm:"size:150;not null" json:"name"`
+	Slug        string     `gorm:"size:150;uniqueIndex;not null" json:"slug"`
+	CountryCode string     `gorm:"size:2;not null;default:RU;index" json:"country_code"` // RU, BY, KZ, AM, KG
+	ParentID    *uuid.UUID `gorm:"type:uuid" json:"parent_id,omitempty"`
+	IsActive    bool       `gorm:"default:true;index" json:"is_active"`
+	SortOrder   int        `gorm:"default:0" json:"sort_order"`
+	Population  int        `gorm:"default:0" json:"population,omitempty"` // для сортировки «крупные сверху»
+
+	Parent   *Region  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+	Children []Region `gorm:"foreignKey:ParentID" json:"children,omitempty"`
 }
 
 // Listing — модель для доски объявлений/предложений

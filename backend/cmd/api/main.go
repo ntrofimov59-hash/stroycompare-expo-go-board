@@ -35,6 +35,11 @@ func main() {
 		log.Fatalf("failed to auto-migrate: %v", err)
 	}
 
+	// сид регионов — можно всегда, он idempotent (не дублирует)
+	if err := database.SeedRegions(db); err != nil {
+		log.Printf("seed regions warning: %v", err)
+	}
+
 	if cfg.AppEnv == "development" {
 		if err := database.Seed(db); err != nil {
 			log.Printf("seed warning: %v", err)
@@ -79,7 +84,7 @@ func main() {
 
 	port := os.Getenv("APP_PORT")
 	if port == "" {
-		port = "8080"
+		port = "8090"
 	}
 
 	log.Printf("Starting server on :%s", port)

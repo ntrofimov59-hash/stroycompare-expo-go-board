@@ -10,8 +10,8 @@ import (
 func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, cfg *config.Config) {
 	h := NewHandler(db)
 
-	rg.GET("/categories", h.GetCategories)
 	rg.GET("/regions", h.GetRegions)
+	rg.GET("/categories", h.GetCategories)
 	rg.GET("/products", h.GetProducts)
 	rg.GET("/products/:id", h.GetProduct)
 

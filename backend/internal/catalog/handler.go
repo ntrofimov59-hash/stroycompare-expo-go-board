@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,13 +39,20 @@ func (h *Handler) GetCategories(c *gin.Context) {
 	})
 }
 
-// GET /api/v1/regions
+// GET /api/v1/regions?country=RU
 func (h *Handler) GetRegions(c *gin.Context) {
 	var regions []models.Region
-	if err := h.db.Order("name ASC").Find(&regions).Error; err != nil {
+	query := h.db.Where("is_active = ?", true).Order("sort_order ASC, name ASC")
+
+	if country := c.Query("country"); country != "" {
+		query = query.Where("country_code = ?", strings.ToUpper(country))
+	}
+
+	if err := query.Find(&regions).Error; err != nil {
 		response.Internal(c, "failed to fetch regions")
 		return
 	}
+
 	response.OK(c, gin.H{"regions": regions})
 }
 
