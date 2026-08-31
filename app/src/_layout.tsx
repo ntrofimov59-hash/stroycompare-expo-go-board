@@ -4,16 +4,16 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAuthStore } from "../src/store/auth";
-import { useThemeStore } from "../src/store/settings"; // Путь к твоему стору тем
+import { useThemeStore } from "../src/store/theme"; // Исправили путь на правильный файл стора тем
 
 export default function RootLayout() {
   const loadToken = useAuthStore((s) => s.loadToken);
-  const loadTheme = useThemeStore((s) => s.load); // Или s.loadTheme, если метод так называется в сторе темы
+  const loadTheme = useThemeStore((s) => s.load); // Используем метод load из стора темы
 
   useEffect(() => {
     loadToken();
     if (loadTheme) {
-      loadTheme(); // Загружаем сохраненную тему при старте
+      loadTheme(); 
     }
   }, [loadToken, loadTheme]);
 
