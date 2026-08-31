@@ -22,7 +22,9 @@ import { api } from "../../src/api/client";
 import { Product } from "../../src/types";
 import { FadeCard } from "../../src/components/FadeCard";
 import { useThemeStore } from "../../src/store/theme";
+import { useSettingsStore } from "../../src/store/settings";
 import { FilterSheet, Filters } from "../../src/components/FilterSheet";
+import { RegionPicker } from "../../src/components/RegionPicker";
 
 const SLIDES = [
   { id: "f0000001-0000-0000-0000-000000000001", title: "Цемент М500", text: "Сравните мешок за минуту" },
@@ -55,6 +57,7 @@ export default function HomeScreen() {
 
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
+  const regionName = useSettingsStore((s) => s.regionName);
 
   const pad = Math.max(insets.left, 16);
   const cardW = (width - pad * 2 - 12) / 2;
@@ -65,9 +68,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Фильтры
+  // Фильтры и регион
   const [filters, setFilters] = useState<Filters>({ categoryId: "", type: "", unit: "" });
   const [open, setOpen] = useState(false);
+  const [regionOpen, setRegionOpen] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   const searchRef = useRef<TextInput>(null);
@@ -167,6 +171,25 @@ export default function HomeScreen() {
     <View style={[styles.top, { backgroundColor: colors.card }]}>
       <Text style={[styles.slogan, { color: colors.text }]}>Цены на стройку — в одном месте</Text>
       <Text style={[styles.sloganSub, { color: colors.muted }]}>Сравните поставщиков и не открывайте десять сайтов</Text>
+
+      <TouchableOpacity
+        onPress={() => setRegionOpen(true)}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          alignSelf: "flex-start",
+          gap: 4,
+          marginBottom: 10,
+          paddingVertical: 4,
+        }}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="location-outline" size={16} color={colors.muted} />
+        <Text style={{ color: colors.text, fontWeight: "600", fontSize: 14 }}>
+          {regionName || "Выберите регион"}
+        </Text>
+        <Ionicons name="chevron-down" size={14} color={colors.muted} />
+      </TouchableOpacity>
 
       <View style={[styles.searchCard, { backgroundColor: mode === "dark" ? "#161b22" : "#F2F2F7" }]}>
         <View style={styles.searchBox}>
@@ -300,6 +323,11 @@ export default function HomeScreen() {
         categories={categories}
         units={units}
       />
+
+      <RegionPicker
+        visible={regionOpen}
+        onClose={() => setRegionOpen(false)}
+      />
     </View>
   );
 }
@@ -312,7 +340,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4 
   },
   slogan: { fontSize: 22, fontWeight: "800" },
-  sloganSub: { marginTop: 4, marginBottom: 14, fontSize: 14, lineHeight: 20 },
+  sloganSub: { marginTop: 4, marginBottom: 12, fontSize: 14, lineHeight: 20 },
   searchCard: {
     borderRadius: 16,
     padding: 8,

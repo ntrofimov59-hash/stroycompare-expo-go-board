@@ -100,6 +100,13 @@ export default function ProductCompareScreen() {
         [
           { text: "Закрыть", style: "cancel" },
           { 
+            text: "Позвонить", 
+            onPress: () => {
+              // Здесь можно добавить вызов Linking.openURL(`tel:${phone}`) при необходимости,
+              // сейчас сохраняем логику действия связи.
+            }
+          },
+          { 
             text: "Написать в чат", 
             onPress: () => router.push(`/(app)/chat/${item.supplier.id}`) 
           }
@@ -159,7 +166,7 @@ export default function ProductCompareScreen() {
               {hasDiscount && (
                 <Text style={[styles.oldPrice, { color: colors.muted }]}>{formatPrice(item.price)}</Text>
               )}
-              <Text style={[styles.finalPrice, { color: colors.text }]}>{formatPrice(hasDiscount ? item.final_price : item.price)}</Text>
+              <Text style={[styles.finalPrice, { color: colors.text }]}>{formatPrice(item.final_price ?? item.price)}</Text>
             </View>
             {hasDiscount && (
               <View style={[styles.discountBadge, { backgroundColor: mode === "dark" ? "#052e16" : "#DCFCE7" }]}>
@@ -187,14 +194,27 @@ export default function ProductCompareScreen() {
             )}
           </View>
 
-          <TouchableOpacity 
-            style={[styles.actionBtn, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }]} 
-            activeOpacity={0.8}
-            onPress={() => handleContact(item)}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={16} color="#FFFFFF" />
-            <Text style={styles.actionText}>Связаться с поставщиком</Text>
-          </TouchableOpacity>
+          <View style={styles.actionsRow}>
+            {item.supplier.phone ? (
+              <TouchableOpacity 
+                style={[styles.phoneBtn, { backgroundColor: mode === "dark" ? "#21262d" : "#F1F5F9", borderColor: colors.border }]} 
+                activeOpacity={0.8}
+                onPress={() => handleContact(item)}
+              >
+                <Ionicons name="call-outline" size={16} color={colors.text} />
+                <Text style={[styles.phoneBtnText, { color: colors.text }]}>Позвонить</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: mode === "dark" ? "#30363d" : "#0F172A" }, !item.supplier.phone && { flex: 1 }]} 
+              activeOpacity={0.8}
+              onPress={() => router.push(`/(app)/chat/${item.supplier.id}`)}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.actionText}>Связаться</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {hasSub && isBest && saved > 0 && (
@@ -308,8 +328,18 @@ export default function ProductCompareScreen() {
             />
           }
           ListFooterComponent={
-            <Text style={{ fontSize: 12, color: colors.muted, textAlign: "center", marginTop: 8, marginBottom: 16, lineHeight: 16, paddingHorizontal: 16 }}>
-              StroyCompare не продаёт товары. Цены справочные. Сделка — напрямую с поставщиком.
+            <Text
+              style={{
+                fontSize: 12,
+                color: colors.muted,
+                textAlign: "center",
+                marginTop: 16,
+                marginBottom: 24,
+                lineHeight: 17,
+                paddingHorizontal: 8,
+              }}
+            >
+              StroyCompare не продаёт товары и не является стороной сделки. Цены справочные. Условия уточняйте у поставщика.
             </Text>
           }
           ListEmptyComponent={
@@ -461,8 +491,24 @@ const styles = StyleSheet.create({
   specsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12, gap: 12 },
   specItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   specText: { fontSize: 12, fontWeight: "500" },
-  actionBtn: {
+  actionsRow: {
+    flexDirection: "row",
     marginTop: 16,
+    gap: 8,
+  },
+  phoneBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  phoneBtnText: { fontWeight: "600", fontSize: 14 },
+  actionBtn: {
+    flex: 2,
     borderRadius: 12,
     paddingVertical: 12,
     flexDirection: "row",

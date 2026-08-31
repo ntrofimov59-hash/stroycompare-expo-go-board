@@ -83,6 +83,33 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const onDeleteAccount = () => {
+    Alert.alert(
+      "Удалить аккаунт?",
+      "Профиль и доступ будут удалены. Для полного удаления данных по 152-ФЗ также можно написать на support@stroycompare.ru.",
+      [
+        { text: "Отмена", style: "cancel" },
+        {
+          text: "Удалить",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete("/users/me");
+            } catch {
+              // эндпоинта может не быть — не блокируем выход
+            }
+            await logout();
+            router.replace("/(auth)/login");
+            Alert.alert(
+              "Аккаунт",
+              "Вы вышли. Если нужна гарантированная очистка данных — напишите на support@stroycompare.ru с вашего email."
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const roleLabel =
     user?.role === "supplier"
       ? "Поставщик"
@@ -146,10 +173,31 @@ export default function ProfileScreen() {
           />
           <MenuRow icon="notifications-outline" title="Уведомления" onPress={() => {}} />
           <MenuRow icon="help-circle-outline" title="Поддержка" onPress={() => {}} />
+          <MenuRow
+            icon="document-text-outline"
+            title="Пользовательское соглашение"
+            onPress={() => router.push("/(app)/legal/terms")}
+          />
+          <MenuRow
+            icon="shield-checkmark-outline"
+            title="Политика персональных данных"
+            onPress={() => router.push("/(app)/legal/privacy")}
+          />
+          <MenuRow
+            icon="help-circle-outline"
+            title="Как это работает"
+            onPress={() => router.push("/(app)/about")}
+          />
         </View>
 
         <TouchableOpacity style={[styles.logout, { backgroundColor: colors.card }]} onPress={onLogout}>
           <Text style={styles.logoutText}>Выйти</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onDeleteAccount} style={{ marginTop: 24, padding: 14 }}>
+          <Text style={{ color: "#ef4444", textAlign: "center", fontWeight: "600" }}>
+            Удалить аккаунт
+          </Text>
         </TouchableOpacity>
 
         <Modal visible={modal} transparent animationType="slide">

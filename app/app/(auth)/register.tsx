@@ -60,12 +60,14 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="Имя"
+        placeholderTextColor="#94a3b8"
         value={firstName}
         onChangeText={setFirstName}
       />
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor="#94a3b8"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -74,6 +76,7 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="Пароль (мин. 8 символов)"
+        placeholderTextColor="#94a3b8"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -93,6 +96,12 @@ export default function RegisterScreen() {
           <Text style={[styles.roleText, role === "supplier" && styles.roleTextActive]}>Поставщик</Text>
         </TouchableOpacity>
       </View>
+
+      <Text style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>
+        {role === "buyer"
+          ? "Покупатель: сравнение цен и объявления. Premium — скидка в таблице."
+          : "Поставщик: размещение цен в сравнении (нужна подписка/trial)."}
+      </Text>
 
       <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, marginVertical: 12 }}

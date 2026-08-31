@@ -196,6 +196,9 @@ export default function SubscriptionScreen() {
                 ? `Подписка активна${until ? ` до ${until}` : ""}`
                 : "Скидка в сравнении цен и доступ к кабинету поставщика"}
             </Text>
+            <Text style={{ fontSize: 12, color: colors.muted, lineHeight: 18, marginTop: 8, textAlign: "center" }}>
+              Оплата пока в тестовом режиме. Скидка применяется только к предложениям, где поставщик разрешил участие (supports_discount). StroyCompare не меняет цену поставщика без его согласия.
+            </Text>
           </Animated.View>
 
           {!hasSub && plans.length > 0 && (
