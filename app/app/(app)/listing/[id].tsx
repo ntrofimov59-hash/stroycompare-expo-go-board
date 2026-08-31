@@ -33,6 +33,14 @@ type Listing = {
   };
 };
 
+const reportListing = (id: string, title: string) => {
+  const subject = encodeURIComponent(`Жалоба на объявление ${id}`);
+  const body = encodeURIComponent(
+    `Объявление: ${title}\nID: ${id}\nПричина: \n\n— Отправлено из StroyCompare`
+  );
+  Linking.openURL(`mailto:support@stroycompare.ru?subject=${subject}&body=${body}`);
+};
+
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [item, setItem] = useState<Listing | null>(null);
@@ -221,6 +229,16 @@ export default function ListingDetailScreen() {
             <Ionicons name="chevron-forward" size={20} color="#0284C7" />
           </TouchableOpacity>
 
+          {/* Кнопка жалобы на объявление */}
+          <TouchableOpacity
+            style={styles.reportBtn}
+            onPress={() => reportListing(item.id, item.title)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="flag-outline" size={15} color={colors.muted} />
+            <Text style={[styles.reportText, { color: colors.muted }]}>Пожаловаться на объявление</Text>
+          </TouchableOpacity>
+
           <View style={{ height: 40 }} />
         </ScrollView>
 
@@ -315,6 +333,20 @@ const styles = StyleSheet.create({
   },
   catalogBannerTitle: { color: "#38bdf8", fontWeight: "700", fontSize: 14 },
   catalogBannerSub: { fontSize: 13, marginTop: 2, fontWeight: "500" },
+
+  reportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  reportText: {
+    fontSize: 13,
+    fontWeight: "500",
+    textDecorationLine: "underline",
+  },
 
   footer: {
     position: "absolute",

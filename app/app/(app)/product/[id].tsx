@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -46,6 +47,14 @@ type Product = {
   unit: string;
   description?: string;
   category?: { name: string };
+};
+
+const reportOffer = (offerId: string, productName?: string, companyName?: string) => {
+  const subject = encodeURIComponent(`Жалоба на предложение ${offerId}`);
+  const body = encodeURIComponent(
+    `Товар: ${productName || "Не указан"}\nПоставщик: ${companyName || "Не указан"}\nID предложения: ${offerId}\nПричина: \n\n— Отправлено из StroyCompare`
+  );
+  Linking.openURL(`mailto:support@stroycompare.ru?subject=${subject}&body=${body}`);
 };
 
 export default function ProductCompareScreen() {
@@ -213,6 +222,16 @@ export default function ProductCompareScreen() {
               <Text style={styles.actionText}>Связаться</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Кнопка жалобы на конкретное предложение */}
+          <TouchableOpacity
+            style={styles.reportBtn}
+            onPress={() => reportOffer(item.id, product?.name, item.supplier.company_name)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="flag-outline" size={13} color={colors.muted} />
+            <Text style={[styles.reportText, { color: colors.muted }]}>Пожаловаться на предложение</Text>
+          </TouchableOpacity>
         </View>
 
         {hasSub && isBest && saved > 0 && (
@@ -517,4 +536,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
+  reportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    marginTop: 12,
+    paddingVertical: 4,
+  },
+  reportText: {
+    fontSize: 12,
+    fontWeight: "500",
+    textDecorationLine: "underline",
+  },
 });
