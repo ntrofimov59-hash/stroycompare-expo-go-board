@@ -9,6 +9,7 @@ export type LanguageCode = "ru" | "en";
 interface SettingsState {
   regionId: string;
   regionName: string;
+  hasSelectedRegion: boolean;
   theme: ThemeMode;
   language: LanguageCode;
   
@@ -42,8 +43,8 @@ const customStorage = {
 };
 
 const DEFAULT_REGION = {
-  id: "a0000001-0000-0000-0000-000000000001",
-  name: "Москва и область",
+  id: "",
+  name: "",
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -51,10 +52,15 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       regionId: DEFAULT_REGION.id,
       regionName: DEFAULT_REGION.name,
+      hasSelectedRegion: false,
       theme: "system",
       language: "ru",
 
-      setRegion: (id, name) => set({ regionId: id, regionName: name }),
+      setRegion: (id, name) => set({ 
+        regionId: id, 
+        regionName: name, 
+        hasSelectedRegion: true 
+      }),
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
     }),

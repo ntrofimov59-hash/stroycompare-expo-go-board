@@ -8,15 +8,17 @@ import { useAuthStore } from "../../src/store/auth";
 import { useSettingsStore } from "../../src/store/settings";
 import { useThemeStore } from "../../src/store/theme";
 import { api } from "../../src/api/client";
+import { RegionPicker } from "../../src/components/RegionPicker";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, accessToken, setAuth, logout } = useAuthStore();
-  const { regionName, setRegion } = useSettingsStore();
+  const { regionName } = useSettingsStore();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
 
   const [modal, setModal] = useState(false);
+  const [regionModal, setRegionModal] = useState(false);
   const [company, setCompany] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -65,27 +67,6 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const pickRegion = () => {
-    Alert.alert("Регион", "Выберите регион", [
-      {
-        text: "Москва",
-        onPress: () =>
-          setRegion("a0000001-0000-0000-0000-000000000001", "Москва"),
-      },
-      {
-        text: "Московская область",
-        onPress: () =>
-          setRegion("a0000001-0000-0000-0000-000000000002", "Московская область"),
-      },
-      {
-        text: "Санкт-Петербург",
-        onPress: () =>
-          setRegion("a0000001-0000-0000-0000-000000000003", "Санкт-Петербург"),
-      },
-      { text: "Отмена", style: "cancel" },
-    ]);
   };
 
   const onLogout = async () => {
@@ -155,8 +136,8 @@ export default function ProfileScreen() {
           <MenuRow
             icon="location-outline"
             title="Регион"
-            subtitle={regionName || "Москва"}
-            onPress={pickRegion}
+            subtitle={regionName || "Не выбран"}
+            onPress={() => setRegionModal(true)}
           />
           <MenuRow
             icon="settings-outline"
@@ -213,6 +194,11 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Modal>
+
+        <RegionPicker
+          visible={regionModal}
+          onClose={() => setRegionModal(false)}
+        />
       </ScrollView>
     </View>
   );

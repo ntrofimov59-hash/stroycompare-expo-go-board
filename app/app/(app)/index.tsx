@@ -77,7 +77,7 @@ export default function HomeScreen() {
   // Загрузка списка категорий для FilterSheet
   useEffect(() => {
     api.get("/categories")
-      .then(({ data }) => setCategories(data || []))
+      .then(({ data }) => setCategories(data.categories || data || []))
       .catch((e) => console.log("categories error", e));
   }, []);
 
