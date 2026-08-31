@@ -117,17 +117,15 @@ export default function BoardScreen() {
     setSaving(true);
     try {
       const p = parseFloat(price.replace(",", "."));
-      const body = {
-        title: title.trim(),
-        description: description.trim() || undefined,
+      await api.post("/listings", {
+        title,
+        description,
+        price: price ? Number(price) : undefined,
+        contact_phone: phone,
         type,
-        price: !isNaN(p) && p > 0 ? p : undefined,
-        contact_phone: phone.trim() || undefined,
-        image: imageUrl.trim() || undefined,
-        region_id: regionId || "a0000001-0000-0000-0000-000000000001",
-      };
-
-      await api.post("/listings", body);
+        region_id: regionId || undefined,
+        image_url: imageUrl || undefined,
+      });
       setModal(false);
       setTitle("");
       setDescription("");
@@ -494,7 +492,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: StyleSheet.hairlineWidth,
   },
- cardImage: {
+  cardImage: {
     width: 110,
     height: "100%",
     minHeight: 110,

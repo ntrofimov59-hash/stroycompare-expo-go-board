@@ -17,8 +17,6 @@ import { api } from "../../src/api/client";
 import { useAuthStore } from "../../src/store/auth";
 import { useThemeStore } from "../../src/store/theme";
 
-const PLAN_ID = "c0000001-0000-0000-0000-000000000002";
-
 const FEATURES = [
   {
     icon: "pricetag" as const,
@@ -53,6 +51,8 @@ export default function SubscriptionScreen() {
   const [mySub, setMySub] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   const star = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(0)).current;
@@ -93,6 +93,13 @@ export default function SubscriptionScreen() {
 
   const load = async () => {
     try {
+      const plansRes = await api.get("/subscriptions/plans");
+      const list = plansRes.data.plans || plansRes.data || [];
+      const paid = list.filter((p: any) => p.price > 0 && p.is_active);
+      setPlans(paid);
+      if (paid.length > 0 && !selectedPlanId) {
+        setSelectedPlanId(paid[0].id);
+      }
       if (accessToken) {
         const meRes = await api.get("/subscriptions/me");
         setMySub(meRes.data);
@@ -115,13 +122,21 @@ export default function SubscriptionScreen() {
 
   const purchase = async () => {
     if (!accessToken) {
-      Alert.alert("Войдите", "Чтобы подключить Premium, нужен аккаунт");
+      Alert.alert("Войдите", "Чтобы подключить Premium, нужен аккаунт", [
+        { text: "Отмена", style: "cancel" },
+        { text: "Войти", onPress: () => router.push("/(auth)/login") },
+      ]);
+      return;
+    }
+    if (!selectedPlanId) {
+      Alert.alert("Выберите тариф");
       return;
     }
     setBuying(true);
     try {
-      await api.post("/subscriptions/purchase", { plan_id: PLAN_ID });
+      await api.post("/subscriptions/purchase", { plan_id: selectedPlanId });
       await load();
+      Alert.alert("Готово", "Premium активирован (тестовый режим)");
     } catch (e: any) {
       Alert.alert("Ошибка", e?.response?.data?.error?.message || "Не удалось");
     } finally {
@@ -183,6 +198,34 @@ export default function SubscriptionScreen() {
             </Text>
           </Animated.View>
 
+          {!hasSub && plans.length > 0 && (
+            <View style={{ marginTop: 20, gap: 10 }}>
+              {plans.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  onPress={() => setSelectedPlanId(p.id)}
+                  style={{
+                    padding: 16,
+                    borderRadius: 14,
+                    borderWidth: 2,
+                    borderColor: selectedPlanId === p.id ? "#E8A017" : colors.border,
+                    backgroundColor: colors.card,
+                  }}
+                >
+                  <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16 }}>
+                    {p.name}
+                  </Text>
+                  <Text style={{ color: colors.muted, marginTop: 4 }}>
+                    {p.price.toLocaleString("ru-RU")} ₽ / {p.duration_days} дн.
+                    {p.discount_percent > 0 ? ` · скидка ${p.discount_percent}%` : ""}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <View style={{ height: 24 }} />
+
           {FEATURES.map((f, i) => (
             <FeatureRow key={f.title} {...f} index={i} colors={colors} />
           ))}
@@ -209,21 +252,25 @@ export default function SubscriptionScreen() {
         {/* Плавающая кнопка поднята выше таб-бара */}
         <View style={[styles.dock, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
           {!hasSub ? (
-            <>
-              <Text style={[styles.dockPrice, { color: colors.muted }]}>699 ₽ · 90 дней</Text>
-              <TouchableOpacity
-                style={styles.cta}
-                onPress={purchase}
-                disabled={buying}
-                activeOpacity={0.85}
-              >
-                {buying ? (
-                  <ActivityIndicator color="#1C1C1E" />
-                ) : (
-                  <Text style={styles.ctaText}>Подключить Premium</Text>
-                )}
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              onPress={purchase}
+              disabled={buying || !selectedPlanId}
+              style={{
+                backgroundColor: "#E8A017",
+                paddingVertical: 16,
+                borderRadius: 14,
+                alignItems: "center",
+                opacity: buying || !selectedPlanId ? 0.7 : 1,
+              }}
+            >
+              {buying ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+                  Подключить Premium
+                </Text>
+              )}
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={styles.cta}

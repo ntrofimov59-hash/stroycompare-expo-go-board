@@ -12,7 +12,7 @@ import {
   Modal,
   ScrollView,
 } from "react-native";
-import { useFocusEffect, Stack } from "expo-router";
+import { useFocusEffect, Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api/client";
 import { useSettingsStore } from "../../src/store/settings";
@@ -42,6 +42,7 @@ export default function SupplierOffersScreen() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [subInfo, setSubInfo] = useState<any>(null);
 
   // Модальное окно и форма
   const [modal, setModal] = useState(false);
@@ -55,8 +56,12 @@ export default function SupplierOffersScreen() {
   const load = async (isRefresh = false) => {
     try {
       if (!isRefresh) setLoading(true);
-      const { data } = await api.get("/offers/me");
-      setOffers(data.offers || []);
+      const [offersRes, subRes] = await Promise.all([
+        api.get("/offers/me"),
+        api.get("/subscriptions/me").catch(() => ({ data: null })),
+      ]);
+      setOffers(offersRes.data.offers || []);
+      setSubInfo(subRes.data);
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || "Ошибка загрузки";
       Alert.alert("Кабинет", msg);
@@ -91,6 +96,11 @@ export default function SupplierOffersScreen() {
   };
 
   const createOffer = async () => {
+    if (!currentRegionId) {
+      Alert.alert("Выберите регион", "Сначала укажите регион в профиле");
+      return;
+    }
+
     const p = parseFloat(price.replace(",", "."));
     if (!selectedProduct) {
       Alert.alert("Ошибка", "Выберите товар из каталога");
@@ -105,10 +115,11 @@ export default function SupplierOffersScreen() {
     try {
       await api.post("/offers", {
         product_id: selectedProduct.id,
-        region_id: currentRegionId || "a0000001-0000-0000-0000-000000000001",
-        price: p,
-        min_order_qty: parseInt(minQty) || 1,
-        delivery_days: parseInt(deliveryDays) || 1,
+        region_id: currentRegionId,
+        price: Number(p),
+        min_order_qty: Number(minQty) || 1,
+        delivery_days: Number(deliveryDays) || undefined,
+        supports_discount: true,
       });
       setModal(false);
       load(true);
@@ -120,17 +131,17 @@ export default function SupplierOffersScreen() {
   };
 
   const deactivate = (id: string) => {
-    Alert.alert("Снять с публикации?", "Предложение исчезнет из сравнения цен покупателей.", [
+    Alert.alert("Скрыть предложение?", "", [
       { text: "Отмена", style: "cancel" },
       {
-        text: "Снять",
+        text: "Скрыть",
         style: "destructive",
         onPress: async () => {
           try {
             await api.delete(`/offers/${id}`);
             load(true);
-          } catch {
-            Alert.alert("Ошибка", "Не удалось изменить статус");
+          } catch (e: any) {
+            Alert.alert("Ошибка", e?.response?.data?.error?.message || "Не удалось");
           }
         },
       },
@@ -161,6 +172,21 @@ export default function SupplierOffersScreen() {
             data={offers}
             keyExtractor={(i) => i.id}
             contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <View style={{ marginBottom: 12 }}>
+                {subInfo?.has_subscription ? (
+                  <Text style={{ color: "#10b981", marginBottom: 8, fontWeight: "600" }}>
+                    Подписка активна до {new Date(subInfo.subscription.end_at).toLocaleDateString("ru-RU")}
+                  </Text>
+                ) : (
+                  <TouchableOpacity onPress={() => router.push("/(app)/subscription")}>
+                    <Text style={{ color: "#E8A017", marginBottom: 8, fontWeight: "600" }}>
+                      Нет активной подписки — продлить Premium
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            }
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
