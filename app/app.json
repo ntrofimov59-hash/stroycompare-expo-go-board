@@ -27,6 +27,9 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "apiUrl": "http://212.113.100.35:8090/api/v1"
     }
   }
 }
