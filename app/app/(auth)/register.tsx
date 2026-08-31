@@ -18,10 +18,19 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [role, setRole] = useState<"buyer" | "supplier">("buyer");
+  const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const onRegister = async () => {
+    if (!agree) {
+      Alert.alert("Согласие", "Нужно принять Политику ПДн и Пользовательское соглашение");
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert("Пароль", "Минимум 8 символов");
+      return;
+    }
     if (!email || !password || !firstName) {
       Alert.alert("Ошибка", "Заполните все поля");
       return;
@@ -64,7 +73,7 @@ export default function RegisterScreen() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Пароль"
+        placeholder="Пароль (мин. 8 символов)"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -75,17 +84,45 @@ export default function RegisterScreen() {
           style={[styles.roleBtn, role === "buyer" && styles.roleActive]}
           onPress={() => setRole("buyer")}
         >
-          <Text style={styles.roleText}>Покупатель</Text>
+          <Text style={[styles.roleText, role === "buyer" && styles.roleTextActive]}>Покупатель</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.roleBtn, role === "supplier" && styles.roleActive]}
           onPress={() => setRole("supplier")}
         >
-          <Text style={styles.roleText}>Поставщик</Text>
+          <Text style={[styles.roleText, role === "supplier" && styles.roleTextActive]}>Поставщик</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.btn} onPress={onRegister} disabled={loading}>
+      <TouchableOpacity
+        style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, marginVertical: 12 }}
+        onPress={() => setAgree((v) => !v)}
+      >
+        <View style={{
+          width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+          borderColor: agree ? "#E8A017" : "#94a3b8",
+          backgroundColor: agree ? "#E8A017" : "transparent",
+          alignItems: "center", justifyContent: "center", marginTop: 1,
+        }}>
+          {agree ? <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>✓</Text> : null}
+        </View>
+        <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: "#64748b" }}>
+          Я согласен с{" "}
+          <Text style={{ color: "#E8A017", fontWeight: "600" }} onPress={() => router.push("/(app)/legal/terms")}>
+            Пользовательским соглашением
+          </Text>
+          {" "}и{" "}
+          <Text style={{ color: "#E8A017", fontWeight: "600" }} onPress={() => router.push("/(app)/legal/privacy")}>
+            Политикой персональных данных
+          </Text>
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.btn, (!agree || loading) && styles.btnDisabled]} 
+        onPress={onRegister} 
+        disabled={!agree || loading}
+      >
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
@@ -112,6 +149,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 20,
     textAlign: "center",
+    color: "#0f172a",
   },
   input: {
     borderWidth: 1,
@@ -120,8 +158,9 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     backgroundColor: "#fff",
+    color: "#0f172a",
   },
-  roleRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  roleRow: { flexDirection: "row", gap: 10, marginBottom: 8 },
   roleBtn: {
     flex: 1,
     padding: 12,
@@ -136,11 +175,16 @@ const styles = StyleSheet.create({
     borderColor: "#0f172a",
   },
   roleText: { fontWeight: "600", color: "#0f172a" },
+  roleTextActive: { color: "#fff" },
   btn: {
     backgroundColor: "#0f172a",
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
+    marginTop: 4,
+  },
+  btnDisabled: {
+    opacity: 0.5,
   },
   btnText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   link: {

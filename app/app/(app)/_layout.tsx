@@ -110,6 +110,8 @@ export default function AppLayout() {
       <Tabs.Screen name="supplier-offers" options={{ href: null, headerShown: true, title: "Мои предложения" }} />
       <Tabs.Screen name="about" options={{ href: null, headerShown: true, title: "О приложении" }} />
       <Tabs.Screen name="settings" options={{ href: null, headerShown: true, title: "Настройки" }} />
+      <Tabs.Screen name="legal/privacy" options={{ href: null, headerShown: true, title: "Политика ПДн" }} />
+      <Tabs.Screen name="legal/terms" options={{ href: null, headerShown: true, title: "Соглашение" }} />
     </Tabs>
   );
 }

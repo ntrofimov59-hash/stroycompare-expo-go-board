@@ -152,7 +152,7 @@ export default function SettingsScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* О сервисе */}
+        {/* О сервисе и Юридическая информация */}
         <Text style={[s.group, { color: colors.muted }]}>О сервисе</Text>
         <TouchableOpacity 
           style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
@@ -160,6 +160,24 @@ export default function SettingsScreen() {
         >
           <Ionicons name="information-circle-outline" size={20} color={colors.text} />
           <Text style={[s.title, { marginLeft: 12, flex: 1, color: colors.text }]}>Как это работает</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
+          onPress={() => router.push("/(app)/legal/terms")}
+        >
+          <Ionicons name="document-text-outline" size={20} color={colors.text} />
+          <Text style={[s.title, { marginLeft: 12, flex: 1, color: colors.text }]}>Пользовательское соглашение</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[s.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]} 
+          onPress={() => router.push("/(app)/legal/privacy")}
+        >
+          <Ionicons name="shield-checkmark-outline" size={20} color={colors.text} />
+          <Text style={[s.title, { marginLeft: 12, flex: 1, color: colors.text }]}>Политика конфиденциальности</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </TouchableOpacity>
 
@@ -297,7 +315,7 @@ const s = StyleSheet.create({
     marginTop: 32,
     fontWeight: "500",
   },
-  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center"},
   modalContent: { width: "80%", borderRadius: 20, padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16, textAlign: "center" },
   modalOption: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },

@@ -307,6 +307,11 @@ export default function ProductCompareScreen() {
               tintColor="#0284C7"
             />
           }
+          ListFooterComponent={
+            <Text style={{ fontSize: 12, color: colors.muted, textAlign: "center", marginTop: 8, marginBottom: 16, lineHeight: 16, paddingHorizontal: 16 }}>
+              StroyCompare не продаёт товары. Цены справочные. Сделка — напрямую с поставщиком.
+            </Text>
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={48} color={colors.muted} />
