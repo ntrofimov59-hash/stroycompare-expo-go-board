@@ -38,6 +38,16 @@ func (h *Handler) GetCategories(c *gin.Context) {
 	})
 }
 
+// GET /api/v1/regions
+func (h *Handler) GetRegions(c *gin.Context) {
+	var regions []models.Region
+	if err := h.db.Order("name ASC").Find(&regions).Error; err != nil {
+		response.Internal(c, "failed to fetch regions")
+		return
+	}
+	response.OK(c, gin.H{"regions": regions})
+}
+
 // GET /api/v1/products
 func (h *Handler) GetProducts(c *gin.Context) {
 	var products []models.Product

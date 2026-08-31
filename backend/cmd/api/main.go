@@ -31,6 +31,16 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
+	if err := database.AutoMigrate(db); err != nil {
+		log.Fatalf("failed to auto-migrate: %v", err)
+	}
+
+	if cfg.AppEnv == "development" {
+		if err := database.Seed(db); err != nil {
+			log.Printf("seed warning: %v", err)
+		}
+	}
+
 	// Подключаем Redis
 	rdb, err := database.ConnectRedis(cfg)
 	if err != nil {
