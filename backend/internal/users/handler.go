@@ -72,6 +72,23 @@ func (h *Handler) BecomeSupplier(c *gin.Context) {
 	response.OK(c, user)
 }
 
+// DELETE /api/v1/users/me
+func (h *Handler) DeleteAccount(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "unauthorized")
+		return
+	}
+	uid := userID.(uuid.UUID)
+
+	if err := h.db.Delete(&models.User{}, "id = ?", uid).Error; err != nil {
+		response.Internal(c, "failed to delete account")
+		return
+	}
+
+	response.OK(c, gin.H{"success": true, "message": "account deleted successfully"})
+}
+
 func (h *Handler) hasActiveSubscription(userID uuid.UUID) bool {
 	var n int64
 	h.db.Model(&models.UserSubscription{}).

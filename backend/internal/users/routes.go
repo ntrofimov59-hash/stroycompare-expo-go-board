@@ -14,5 +14,6 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, cfg *config.Config) {
 	u.Use(middleware.Auth(cfg))
 	{
 		u.POST("/me/become-supplier", h.BecomeSupplier)
+		u.DELETE("/me", h.DeleteAccount)
 	}
 }
