@@ -110,6 +110,7 @@ export default function HomeScreen() {
 
   const units = [...new Set(products.map((p) => p.unit).filter(Boolean))];
   const activeCount = [filters.categoryId, filters.type, filters.unit].filter(Boolean).length;
+  const hasActiveFiltersOrSearch = Boolean(query || activeCount > 0);
 
   const renderCard = ({ item }: { item: Product }) => (
     <FadeCard>
@@ -152,84 +153,91 @@ export default function HomeScreen() {
   );
 
   const ListHeader = (
-    <View style={[styles.top, { backgroundColor: colors.card }]}>
-      <Text style={[styles.slogan, { color: colors.text }]}>Цены на стройку — в одном месте</Text>
-      <Text style={[styles.sloganSub, { color: colors.muted }]}>Сравните поставщиков и не открывайте десять сайтов</Text>
-
-      <TouchableOpacity
-        onPress={() => setRegionOpen(true)}
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          alignSelf: "flex-start",
-          gap: 4,
-          marginBottom: 10,
-          paddingVertical: 4,
-        }}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="location-outline" size={16} color={colors.muted} />
-        <Text style={{ color: colors.text, fontWeight: "600", fontSize: 14 }}>
-          {regionName || "Выберите регион"}
-        </Text>
-        <Ionicons name="chevron-down" size={14} color={colors.muted} />
-      </TouchableOpacity>
-
-      <View style={[styles.searchCard, { backgroundColor: mode === "dark" ? "#161b22" : "#F2F2F7" }]}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color={colors.muted} />
-          <TextInput
-            ref={searchRef}
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Цемент, арматура, кладка..."
-            placeholderTextColor="#8B949E"
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-            onSubmitEditing={() => setQuery(search.trim())}
-          />
-        </View>
-
+    <View style={[styles.top, { paddingHorizontal: pad, paddingTop: 4, marginBottom: 8 }]}>
+      {/* Шапка */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <TouchableOpacity
-          style={styles.premChip}
-          onPress={() => router.push("/(app)/subscription")}
-          activeOpacity={0.8}
+          onPress={() => setRegionOpen(true)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, flex: 1 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="sparkles" size={16} color="#E3B341" />
-          <Text style={styles.premChipText}>С Premium цены ниже до 15%</Text>
-          <Ionicons name="chevron-forward" size={16} color="#E3B341" />
+          <Ionicons name="location-outline" size={18} color={colors.accent || "#2AABEE"} />
+          <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16 }} numberOfLines={1}>
+            {regionName || "Регион"}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={colors.muted} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/(app)/subscription")} hitSlop={8}>
+          <Ionicons name="diamond-outline" size={22} color={colors.accent || "#2AABEE"} />
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        ref={sliderRef}
-        data={SLIDES}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(i) => i.id}
-        onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-          const i = Math.round(e.nativeEvent.contentOffset.x / (width - pad * 2));
-          setSlide(i);
+      {/* Поиск */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: colors.bgElevated || (mode === "dark" ? "#161b22" : "#F2F2F7"),
+          borderRadius: 12,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border,
+          paddingHorizontal: 12,
+          height: 44,
+          marginBottom: 12,
         }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.slide, { width: width - pad * 2, backgroundColor: mode === "dark" ? "#1f242c" : "#0F172A" }]}
-            onPress={() => router.push(`/(app)/product/${item.id}`)}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.slideKicker}>Сравнить за минуту</Text>
-            <Text style={styles.slideTitle}>{item.title}</Text>
-            <Text style={styles.slideText}>{item.text}</Text>
+      >
+        <Ionicons name="search" size={18} color={colors.muted} />
+        <TextInput
+          ref={searchRef}
+          style={{ flex: 1, marginLeft: 8, color: colors.text, fontSize: 16 }}
+          placeholder="Поиск материалов и услуг"
+          placeholderTextColor={colors.muted}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          onSubmitEditing={() => setQuery(search.trim())}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => { setSearch(""); setQuery(""); }}>
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
           </TouchableOpacity>
         )}
-      />
-
-      <View style={styles.dots}>
-        {SLIDES.map((_, i) => (
-          <View key={i} style={[styles.dot, { backgroundColor: mode === "dark" ? "#30363d" : "#D4D4D8" }, i === slide && styles.dotOn]} />
-        ))}
       </View>
+
+      {/* Слайдер и промо-блоки скрываем, если активен поиск или фильтры */}
+      {!hasActiveFiltersOrSearch && (
+        <>
+          <FlatList
+            ref={sliderRef}
+            data={SLIDES}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(i) => i.id}
+            onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+              const i = Math.round(e.nativeEvent.contentOffset.x / (width - pad * 2));
+              setSlide(i);
+            }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.slide, { width: width - pad * 2, backgroundColor: mode === "dark" ? "#1f242c" : "#0F172A" }]}
+                onPress={() => router.push(`/(app)/product/${item.id}`)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.slideKicker}>Сравнить за минуту</Text>
+                <Text style={styles.slideTitle}>{item.title}</Text>
+                <Text style={styles.slideText}>{item.text}</Text>
+              </TouchableOpacity>
+            )}
+          />
+
+          <View style={styles.dots}>
+            {SLIDES.map((_, i) => (
+              <View key={i} style={[styles.dot, { backgroundColor: mode === "dark" ? "#30363d" : "#D4D4D8" }, i === slide && styles.dotOn]} />
+            ))}
+          </View>
+        </>
+      )}
 
       <TouchableOpacity
         onPress={() => setOpen(true)}
@@ -238,19 +246,19 @@ export default function HomeScreen() {
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          marginTop: 14,
-          marginBottom: 20,
+          marginTop: 6,
+          marginBottom: 12,
           borderWidth: 1,
           borderColor: colors.border,
           borderRadius: 12,
-          paddingVertical: 14,
+          paddingVertical: 12,
           backgroundColor: mode === "dark" ? "#161b22" : "#F2F2F7",
         }}
         activeOpacity={0.8}
       >
         <Ionicons name="options-outline" size={18} color={colors.text} />
         <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>
-          Сортировка{activeCount ? ` · ${activeCount}` : ""}
+          Сортировка и фильтры{activeCount ? ` · ${activeCount}` : ""}
         </Text>
       </TouchableOpacity>
     </View>
@@ -325,51 +333,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   top: { 
-    paddingHorizontal: 16, 
-    paddingTop: 16, 
     paddingBottom: 4 
   },
-  slogan: { fontSize: 22, fontWeight: "800" },
-  sloganSub: { marginTop: 4, marginBottom: 12, fontSize: 14, lineHeight: 20 },
-  searchCard: {
-    borderRadius: 16,
-    padding: 8,
-    marginBottom: 14,
-  },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#161B22",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#30363D",
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-  },
-  premChip: {
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#1F1A0A",
-    borderWidth: 1,
-    borderColor: "#BB9A3A",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  premChipText: {
-    color: "#E3B341",
-    fontWeight: "700",
-    fontSize: 13,
-    flex: 1,
-  },
-
   slide: {
     borderRadius: 16,
     padding: 18,
@@ -382,7 +347,7 @@ const styles = StyleSheet.create({
   dotOn: { backgroundColor: "#2AABEE", width: 16 },
 
   feed: { 
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 100, 
     paddingHorizontal: 0 
   },

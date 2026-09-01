@@ -239,12 +239,9 @@ export default function BoardScreen() {
               />
             }
             ListHeaderComponent={
-              <View style={styles.noticeBox}>
-                <Ionicons name="shield-checkmark-outline" size={15} color={colors.muted} />
-                <Text style={[styles.noticeText, { color: colors.muted }]}>
-                  Объявления публикуют пользователи. Проверяйте продавца перед сделкой.
-                </Text>
-              </View>
+              <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 12, lineHeight: 16, paddingHorizontal: 4 }}>
+                Объявления публикуют пользователи. Проверяйте продавца. Есть «Пожаловаться» в карточке.
+              </Text>
             }
             ListEmptyComponent={
               <View style={styles.empty}>
@@ -354,7 +351,7 @@ export default function BoardScreen() {
                   <View style={[styles.modalNoticeBox, { backgroundColor: mode === "dark" ? "#161b22" : "#F8FAFC", borderColor: colors.border }]}>
                     <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
                     <Text style={[styles.modalNoticeText, { color: colors.muted }]}>
-                      Объявления публикуют пользователи. Проверяйте продавца перед сделкой.
+                      Объявления публикуют пользователи. Проверяйте продавца. Есть «Пожаловаться» в карточке.
                     </Text>
                   </View>
 
@@ -503,19 +500,6 @@ const styles = StyleSheet.create({
   chipTextActive: { color: "#fff", fontWeight: "600" },
 
   list: { padding: 16 },
-
-  noticeBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    paddingHorizontal: 4,
-    gap: 6,
-  },
-  noticeText: {
-    fontSize: 12,
-    fontWeight: "500",
-    flex: 1,
-  },
 
   modalNoticeBox: {
     flexDirection: "row",

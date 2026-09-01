@@ -93,12 +93,6 @@ export default function ProductCompareScreen() {
     load();
   }, [load]);
 
-  const formatPrice = (n: number) =>
-    new Intl.NumberFormat("ru-RU", {
-      style: "decimal",
-      maximumFractionDigits: 2,
-    }).format(n) + " ₽";
-
   const handleContact = (item: Offer) => {
     const supplierName = item.supplier.company_name;
     const phone = item.supplier.phone;
@@ -125,7 +119,8 @@ export default function ProductCompareScreen() {
   };
 
   const renderOffer = ({ item, index }: { item: Offer; index: number }) => {
-    const hasDiscount = item.discount_percent > 0 && item.final_price < item.price;
+    const price = item.final_price ?? item.price;
+    const hasDiscount = item.discount_percent != null && item.discount_percent > 0 && item.final_price != null && item.final_price < item.price;
     const isBest = index === 0 && sort === "price_asc";
     const best = isBest ? offers[0] : null;
     const saved = best && best.discount_percent > 0 ? best.price - best.final_price : 0;
@@ -137,22 +132,33 @@ export default function ProductCompareScreen() {
           { backgroundColor: colors.card, borderColor: colors.border },
           isBest && [styles.cardBest, { backgroundColor: mode === "dark" ? "#161b22" : "#F8FAFC" }]
         ]}>
-          {isBest && (
-            <View style={styles.bestBadge}>
-              <Ionicons name="flash" size={12} color="#FFFFFF" />
-              <Text style={styles.bestBadgeText}>Лучшая цена</Text>
-            </View>
-          )}
+          {/* Бейджи в карточке */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+            {isBest && (
+              <View style={{ backgroundColor: colors.success, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>Лучшая цена</Text>
+              </View>
+            )}
+            {item.supplier?.is_verified && (
+              <View style={{ backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ color: colors.accent, fontSize: 11, fontWeight: "600" }}>Проверен</Text>
+              </View>
+            )}
+            {hasDiscount && (
+              <View style={{ backgroundColor: "#E8A01722", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ color: "#E8A017", fontSize: 11, fontWeight: "700" }}>
+                  −{item.discount_percent}% Premium
+                </Text>
+              </View>
+            )}
+          </View>
 
           <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
               <View style={styles.supplierRow}>
-                <Text style={[styles.supplierName, { color: colors.text }]} numberOfLines={1}>{item.supplier.company_name}</Text>
-                {item.supplier.is_verified && (
-                  <View style={styles.verifiedBadge}>
-                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-                  </View>
-                )}
+                <Text style={[styles.supplierName, { color: colors.text }]} numberOfLines={1}>
+                  {item.supplier?.company_name || "Поставщик"}
+                </Text>
               </View>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={13} color="#F59E0B" />
@@ -169,17 +175,16 @@ export default function ProductCompareScreen() {
           </View>
 
           <View style={[styles.priceSection, { borderTopColor: colors.border }]}>
-            <View>
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
               {hasDiscount && (
-                <Text style={[styles.oldPrice, { color: colors.muted }]}>{formatPrice(item.price)}</Text>
+                <Text style={{ color: colors.muted, textDecorationLine: "line-through", fontSize: 13 }}>
+                  {item.price.toLocaleString("ru-RU")} ₽
+                </Text>
               )}
-              <Text style={[styles.finalPrice, { color: colors.text }]}>{formatPrice(item.final_price ?? item.price)}</Text>
+              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "800" }}>
+                {price.toLocaleString("ru-RU")} ₽
+              </Text>
             </View>
-            {hasDiscount && (
-              <View style={[styles.discountBadge, { backgroundColor: mode === "dark" ? "#052e16" : "#DCFCE7" }]}>
-                <Text style={styles.discountText}>−{item.discount_percent}%</Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.specsRow}>
@@ -453,29 +458,9 @@ const styles = StyleSheet.create({
     borderColor: "#0284C7",
     borderWidth: 1.5,
   },
-  bestBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#0284C7",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 4,
-    marginBottom: 10,
-  },
-  bestBadgeText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   supplierRow: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "80%" },
   supplierName: { fontSize: 16, fontWeight: "700" },
-  verifiedBadge: {
-    backgroundColor: "#0284C7",
-    borderRadius: 8,
-    width: 14,
-    height: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 },
   ratingText: { fontSize: 13, fontWeight: "500" },
   regionBadge: {
@@ -495,18 +480,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
   },
-  oldPrice: {
-    fontSize: 13,
-    textDecorationLine: "line-through",
-    fontWeight: "500",
-  },
-  finalPrice: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
-  discountBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  discountText: { color: "#16A34A", fontSize: 12, fontWeight: "700" },
   specsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12, gap: 12 },
   specItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   specText: { fontSize: 12, fontWeight: "500" },
