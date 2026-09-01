@@ -45,7 +45,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { data } = await authApi.oauth({ provider, token });
-      await setAuth(data.access_token, data.user);
+      await setAuth(data.access_token, data.user, data.refresh_token);
       router.replace("/(app)");
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || `Ошибка входа через ${provider}`;
@@ -63,7 +63,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { data } = await authApi.login(email.trim(), password);
-      await setAuth(data.access_token, data.user);
+      await setAuth(data.access_token, data.user, data.refresh_token);
       router.replace("/(app)");
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || "Неверный логин или пароль";
@@ -92,12 +92,20 @@ export default function LoginScreen() {
     }
   };
 
-  // Обработчик для Telegram (открытие виджета или ссылки на бота авторизации)
-  const handleTelegramLogin = () => {
-    Alert.alert(
-      "Telegram Login",
-      "Здесь можно настроить редирект на Telegram бота аутентификации."
-    );
+  // Обработчик для Telegram (открытие веб-авторизации через вашего бота)
+  const handleTelegramLogin = async () => {
+    try {
+      // Замените на публичный URL вашего бэкенда или Telegram-бота для авторизации
+      const telegramAuthUrl = "http://212.113.100.35:8090/api/v1/auth/telegram/widget"; 
+      const result = await WebBrowser.openAuthSessionAsync(telegramAuthUrl, "stroycompare://");
+      
+      if (result.type === "success" && result.url) {
+        // Здесь можно извлечь токен из редиректа, если бэкенд возвращает его в deep link
+        // Например: stroycompare://oauth?token=xxx
+      }
+    } catch (e: any) {
+      Alert.alert("Ошибка Telegram", e.message || "Не удалось запустить авторизацию");
+    }
   };
 
   return (
