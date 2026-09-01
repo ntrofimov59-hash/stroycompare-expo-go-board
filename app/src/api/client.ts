@@ -72,4 +72,7 @@ export const authApi = {
   }) => api.post("/auth/register", data),
 
   me: () => api.get("/users/me"),
+
+  oauth: (data: { provider: string; token: string }) =>
+    api.post("/auth/oauth", data),
 };

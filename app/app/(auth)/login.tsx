@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,13 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link, router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { authApi } from "../../src/api/client";
 import { useAuthStore } from "../../src/store/auth";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -20,30 +25,78 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
 
+  // Настройка Google Auth с вашим Client ID
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: "337435307488-s83l9va1ksg8r3s1rfufdirt2ruvj3o2.apps.googleusercontent.com",
+    iosClientId: "337435307488-s83l9va1ksg8r3s1rfufdirt2ruvj3o2.apps.googleusercontent.com",
+    androidClientId: "337435307488-s83l9va1ksg8r3s1rfufdirt2ruvj3o2.apps.googleusercontent.com",
+  });
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        handleOAuthLogin("google", authentication.accessToken);
+      }
+    }
+  }, [response]);
+
+  const handleOAuthLogin = async (provider: string, token: string) => {
+    setLoading(true);
+    try {
+      const { data } = await authApi.oauth({ provider, token });
+      await setAuth(data.access_token, data.user);
+      router.replace("/(app)");
+    } catch (e: any) {
+      const msg = e?.response?.data?.error?.message || `Ошибка входа через ${provider}`;
+      Alert.alert("Ошибка", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onLogin = async () => {
     if (!email || !password) {
       Alert.alert("Ошибка", "Введите email и пароль");
       return;
     }
-
     setLoading(true);
     try {
       const { data } = await authApi.login(email.trim(), password);
       await setAuth(data.access_token, data.user);
       router.replace("/(app)");
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.error?.message || "Неверный логин или пароль";
+      const msg = e?.response?.data?.error?.message || "Неверный логин или пароль";
       Alert.alert("Ошибка входа", msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const onSocial = (provider: string) => {
+  // Обработчик для Apple Sign In
+  const handleAppleLogin = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (credential.identityToken) {
+        handleOAuthLogin("apple", credential.identityToken);
+      }
+    } catch (e: any) {
+      if (e.code !== "ERR_REQUEST_CANCELED") {
+        Alert.alert("Ошибка Apple", e.message);
+      }
+    }
+  };
+
+  // Обработчик для Telegram (открытие виджета или ссылки на бота авторизации)
+  const handleTelegramLogin = () => {
     Alert.alert(
-      "Скоро",
-      `Вход через ${provider} подключим на следующем шаге`
+      "Telegram Login",
+      "Здесь можно настроить редирект на Telegram бота аутентификации."
     );
   };
 
@@ -98,22 +151,25 @@ export default function LoginScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.socialBtn}
-          onPress={() => onSocial("Google")}
+          style={[styles.socialBtn, !request && styles.btnDisabled]}
+          disabled={!request || loading}
+          onPress={() => promptAsync()}
         >
           <Text style={styles.socialText}>Войти через Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.socialBtn}
-          onPress={() => onSocial("Apple")}
+          style={[styles.socialBtn, loading && styles.btnDisabled]}
+          disabled={loading}
+          onPress={handleAppleLogin}
         >
           <Text style={styles.socialText}>Войти через Apple</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.socialBtn, styles.telegramBtn]}
-          onPress={() => onSocial("Telegram")}
+          style={[styles.socialBtn, styles.telegramBtn, loading && styles.btnDisabled]}
+          disabled={loading}
+          onPress={handleTelegramLogin}
         >
           <Text style={[styles.socialText, { color: "#fff" }]}>
             Войти через Telegram
@@ -140,20 +196,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: "center",
   },
-  header: {
-    marginBottom: 32,
-    alignItems: "center",
-  },
-  logo: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    color: "#64748b",
-  },
+  header: { marginBottom: 32, alignItems: "center" },
+  logo: { fontSize: 28, fontWeight: "700", color: "#0f172a" },
+  subtitle: { marginTop: 6, fontSize: 14, color: "#64748b" },
   form: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -164,12 +209,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: 6,
-  },
+  label: { fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -188,29 +228,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  btnDisabled: {
-    opacity: 0.6,
-  },
-  btnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 18,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#e2e8f0",
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    color: "#94a3b8",
-    fontSize: 13,
-  },
+  btnDisabled: { opacity: 0.6 },
+  btnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  divider: { flexDirection: "row", alignItems: "center", marginVertical: 18 },
+  line: { flex: 1, height: 1, backgroundColor: "#e2e8f0" },
+  dividerText: { marginHorizontal: 10, color: "#94a3b8", fontSize: 13 },
   socialBtn: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -220,25 +242,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: "#fff",
   },
-  telegramBtn: {
-    backgroundColor: "#229ED9",
-    borderColor: "#229ED9",
-  },
-  socialText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#0f172a",
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 16,
-  },
-  footerText: {
-    color: "#64748b",
-  },
-  link: {
-    color: "#0f172a",
-    fontWeight: "700",
-  },
+  telegramBtn: { backgroundColor: "#229ED9", borderColor: "#229ED9" },
+  socialText: { fontSize: 15, fontWeight: "600", color: "#0f172a" },
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 16 },
+  footerText: { color: "#64748b" },
+  link: { color: "#0f172a", fontWeight: "700" },
 });
